@@ -943,6 +943,13 @@ export function ExpenseForm({
                             <FormLabel>
                               {t('isReimbursementField.label')}
                             </FormLabel>
+                            {locale === 'ko' && (
+                              <FormDescription className="mt-1 max-w-md">
+                                {field.value
+                                  ? '정산은 이미 발생한 비용을 갚은 기록이에요. 소비 통계와 비용 부담자별 금액에는 포함되지 않아요.'
+                                  : '일반 소비를 기록할 때는 선택하지 마세요. 일반 지출은 전체 합계와 비용 부담자별 금액에 포함돼요.'}
+                              </FormDescription>
+                            )}
                           </div>
                         </FormItem>
                       )}
@@ -1447,6 +1454,11 @@ export function ExpenseForm({
                           <FormLabel>
                             {t('SplitModeField.saveAsDefault')}
                           </FormLabel>
+                          {locale === 'ko' && (
+                            <FormDescription className="mt-1 max-w-md">
+                              선택한 분할 방식과 비용 부담자 구성을 이 그룹에서 다음 지출을 만들 때 기본값으로 적용해요.
+                            </FormDescription>
+                          )}
                         </div>
                       </FormItem>
                     )}
