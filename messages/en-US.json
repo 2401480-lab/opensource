@@ -143,7 +143,11 @@
       "Jane": "Jane",
       "Jack": "Jack",
       "you": "You",
-      "member": "Member"
+      "member": "Member",
+      "emailPlaceholder": "Invite by email (optional)",
+      "emailHint": "With an email, that person sees an invitation in their groups when they log in with it, and joins as this participant with one click.",
+      "emailAlreadyMember": "One of the emails belongs to someone already in this group (or to you).",
+      "joinedNoEmail": "Joined"
     },
     "Settings": {
       "title": "Local settings",
@@ -522,7 +526,9 @@
     "paidForMin1": "The expense must be paid for at least one participant.",
     "noZeroShares": "All shares must be higher than 0.",
     "amountSum": "The amounts add up to {sum}, {difference} {direction, select, over {more} other {less}} than the expense amount ({amount}).",
-    "percentageSum": "The percentages add up to {sum}%, {difference}% {direction, select, over {more} other {less}} than 100%."
+    "percentageSum": "The percentages add up to {sum}%, {difference}% {direction, select, over {more} other {less}} than 100%.",
+    "invalidEmail": "Enter a valid email address.",
+    "duplicateParticipantEmail": "Another participant is already invited with this email."
   },
   "Categories": {
     "search": "Search category...",
@@ -677,7 +683,15 @@
     "loadError": "Your groups could not be loaded.",
     "retry": "Retry",
     "star": "Add to favorites",
-    "unstar": "Remove from favorites"
+    "unstar": "Remove from favorites",
+    "invites": {
+      "title": "Invitations",
+      "item": "{inviter} invited you to {group} as {participant}.",
+      "accept": "Accept invitation",
+      "decline": "Decline",
+      "accepted": "You joined {group}.",
+      "error": "This invitation is no longer valid."
+    }
   },
   "Join": {
     "title": "Join {name}",
@@ -858,6 +872,16 @@
     "edit": "Add or rename participants",
     "inviteTitle": "Invite link",
     "inviteDescription": "Send this link to participants who have not joined yet: they log in and pick their name.",
-    "copy": "Copy"
+    "copy": "Copy",
+    "emailInvite": "Invite by email",
+    "emailPlaceholder": "Their email",
+    "send": "Send invitation",
+    "invited": "Invited: {email}",
+    "cancelInvite": "Cancel invitation",
+    "emailSent": "Invitation sent. They will see it in their groups after logging in with this email.",
+    "emailError": "Could not send the invitation.",
+    "emailAlreadyMember": "This email belongs to someone already in the group.",
+    "invalidEmail": "Enter a valid email address.",
+    "emailDescription": "No email is sent: the person sees the invitation in the app after signing up or logging in with this email."
   }
 }

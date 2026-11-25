@@ -30,6 +30,11 @@ export const EditGroup = ({
       linkedParticipantIds={data?.group.participants
         .filter((p) => p.isLinked)
         .map((p) => p.id)}
+      pendingInviteEmails={Object.fromEntries(
+        (data?.group.participants ?? [])
+          .filter((p) => p.invite)
+          .map((p) => [p.id, p.invite!.email]),
+      )}
       enableGroupDeletion={runtimeFeatureFlags.enableGroupDeletion}
     />
   )

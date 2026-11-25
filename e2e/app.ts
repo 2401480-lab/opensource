@@ -83,7 +83,12 @@ export function uniqueSuffix(): string {
 
 export async function createGroup(
   page: Page,
-  opts: { name: string; participants: string[] },
+  opts: {
+    name: string
+    participants: string[]
+    /** Email invites, by participant name (not the creator). */
+    emails?: Record<string, string>
+  },
 ): Promise<string> {
   await page.goto('/groups/create')
 
@@ -103,6 +108,12 @@ export async function createGroup(
       page.locator(`input[name="participants.${i}.name"]`),
       opts.participants[i],
     )
+    const email = opts.emails?.[opts.participants[i]]
+    if (email)
+      await fillStable(
+        page.locator(`input[name="participants.${i}.email"]`),
+        email,
+      )
   }
 
   await page.getByRole('button', { name: 'Create', exact: true }).click()

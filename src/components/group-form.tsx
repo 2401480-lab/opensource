@@ -34,7 +34,7 @@ import {
   GroupFormValues,
 } from '@/lib/schemas'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Save, Trash2 } from 'lucide-react'
+import { Mail, Save, Trash2 } from 'lucide-react'
 import { useLocale, useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useFieldArray, useForm } from 'react-hook-form'
@@ -58,6 +58,8 @@ export type Props = {
   myParticipantId?: string
   /** Editing: participants linked to an account (members). */
   linkedParticipantIds?: string[]
+  /** Editing: email of each pending invite, by participant id. */
+  pendingInviteEmails?: Record<string, string>
 }
 
 export function GroupForm({
@@ -69,6 +71,7 @@ export function GroupForm({
   currentUserName = '',
   myParticipantId,
   linkedParticipantIds = [],
+  pendingInviteEmails = {},
 }: Props) {
   const locale = useLocale()
   const t = useTranslations('GroupForm')
@@ -80,7 +83,11 @@ export function GroupForm({
           information: group.information ?? '',
           currency: group.currency ?? '',
           currencyCode: group.currencyCode ?? '',
-          participants: group.participants,
+          participants: group.participants.map(({ id, name }) => ({
+            id,
+            name,
+            email: pendingInviteEmails[id] ?? '',
+          })),
         }
       : {
           name: '',
@@ -106,6 +113,11 @@ export function GroupForm({
     return null
   }
 
+  // Who can be invited by email: everyone but the creator (new group) and
+  // participants already linked to an account.
+  const canInvite = (id: string | undefined, index: number) =>
+    group ? !(id && linkedParticipantIds.includes(id)) : index > 0
+
   return (
     <Form {...form}>
       <form
@@ -118,7 +130,20 @@ export function GroupForm({
           } else {
             sendEvent({ event: 'group: create', props: {} }, `/groups`)
           }
-          await onSubmit(values)
+          try {
+            await onSubmit(values)
+          } catch (error) {
+            if (
+              error instanceof Error &&
+              error.message === 'EMAIL_ALREADY_MEMBER'
+            ) {
+              form.setError('root', {
+                message: t('Participants.emailAlreadyMember'),
+              })
+              return
+            }
+            throw error
+          }
         })}
       >
         <Card className="mb-4">
@@ -235,7 +260,9 @@ export function GroupForm({
         <Card className="mb-4">
           <CardHeader>
             <CardTitle>{t('Participants.title')}</CardTitle>
-            <CardDescription>{t('Participants.description')}</CardDescription>
+            <CardDescription>
+              {t('Participants.description')} {t('Participants.emailHint')}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <ul className="flex flex-col gap-2">
@@ -300,6 +327,33 @@ export function GroupForm({
                       </FormItem>
                     )}
                   />
+                  {canInvite(item.id, index) && (
+                    <FormField
+                      control={form.control}
+                      name={`participants.${index}.email`}
+                      render={({ field }) => (
+                        <FormItem className="mt-1">
+                          <FormLabel className="sr-only">
+                            {t('Participants.emailPlaceholder')}
+                          </FormLabel>
+                          <FormControl>
+                            <div className="flex items-center gap-2 pl-1">
+                              <Mail className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                              <Input
+                                type="email"
+                                autoComplete="off"
+                                className="h-8 text-sm"
+                                {...field}
+                                value={field.value ?? ''}
+                                placeholder={t('Participants.emailPlaceholder')}
+                              />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
                 </li>
               ))}
             </ul>
@@ -308,7 +362,7 @@ export function GroupForm({
             <Button
               variant="secondary"
               onClick={() => {
-                append({ name: '' })
+                append({ name: '', email: '' })
               }}
               type="button"
             >
@@ -316,6 +370,12 @@ export function GroupForm({
             </Button>
           </CardFooter>
         </Card>
+
+        {form.formState.errors.root && (
+          <p role="alert" className="text-sm text-destructive">
+            {form.formState.errors.root.message}
+          </p>
+        )}
 
         <div className="flex mt-4 gap-2">
           <SubmitButton

@@ -1,4 +1,5 @@
 import { getGroup, getGroupExpensesParticipants } from '@/lib/api'
+import { getPendingInviteEmails } from '@/lib/membership'
 import { prisma } from '@/lib/prisma'
 import { groupProcedure } from '@/trpc/init'
 import { TRPCError } from '@trpc/server'
@@ -24,7 +25,13 @@ export const getGroupDetailsProcedure = groupProcedure.query(
       .filter((p) => p.userId !== null)
       .map((p) => p.id)
     return {
-      group: { ...group, participants: publicParticipants(group.participants) },
+      group: {
+        ...group,
+        participants: publicParticipants(
+          group.participants,
+          await getPendingInviteEmails(groupId),
+        ),
+      },
       participantsWithExpenses: Array.from(
         new Set([
           ...participantsWithExpenses,

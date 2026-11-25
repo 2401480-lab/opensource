@@ -97,7 +97,11 @@
       "Jack": "길동",
       "new": "새로 추가",
       "you": "나",
-      "member": "멤버"
+      "member": "멤버",
+      "emailPlaceholder": "이메일로 초대 (선택)",
+      "emailHint": "이메일을 적으면, 그 사람이 이 이메일로 로그인했을 때 내 그룹 화면에 초대가 보이고 [초대 받기]를 누르면 이 참여자로 바로 들어와요.",
+      "emailAlreadyMember": "이미 이 그룹에 참여한 사람(또는 나)의 이메일이 있어요.",
+      "joinedNoEmail": "참여함"
     },
     "Settings": {
       "ActiveUserField": {
@@ -366,7 +370,9 @@
     "min2": "최소 두 글자 이상 입력해 주세요.",
     "titleRequired": "제목을 입력해 주세요.",
     "max5": "최대 5자까지 입력하세요.",
-    "max50": "최대 50자까지 입력하세요."
+    "max50": "최대 50자까지 입력하세요.",
+    "invalidEmail": "올바른 이메일 주소를 입력해 주세요.",
+    "duplicateParticipantEmail": "이미 다른 참여자에게 같은 이메일로 초대했어요."
   },
   "Categories": {
     "search": "카테고리 선택...",
@@ -613,7 +619,15 @@
     "loadError": "내 그룹을 불러오지 못했어요.",
     "retry": "다시 시도",
     "star": "즐겨찾기에 추가",
-    "unstar": "즐겨찾기에서 빼기"
+    "unstar": "즐겨찾기에서 빼기",
+    "invites": {
+      "title": "받은 초대",
+      "item": "{inviter}님이 {group} 그룹에 {participant}(으)로 초대했어요.",
+      "accept": "초대 받기",
+      "decline": "거절",
+      "accepted": "{group} 그룹에 참여했어요.",
+      "error": "더 이상 유효하지 않은 초대예요."
+    }
   },
   "Join": {
     "title": "{name} 그룹에 참여하기",
@@ -794,6 +808,16 @@
     "edit": "참여자 추가·이름 변경",
     "inviteTitle": "초대 링크",
     "inviteDescription": "아직 참여하지 않은 사람에게 이 링크를 보내세요. 로그인한 뒤 자기 이름을 고르면 돼요.",
-    "copy": "복사"
+    "copy": "복사",
+    "emailInvite": "이메일로 초대",
+    "emailPlaceholder": "초대할 사람의 이메일",
+    "send": "초대 보내기",
+    "invited": "초대함: {email}",
+    "cancelInvite": "초대 취소",
+    "emailSent": "초대를 보냈어요. 그 사람이 이 이메일로 로그인하면 내 그룹 화면에서 초대를 볼 수 있어요.",
+    "emailError": "초대를 보내지 못했어요.",
+    "emailAlreadyMember": "이미 그룹에 참여한 사람의 이메일이에요.",
+    "invalidEmail": "올바른 이메일 주소를 입력해 주세요.",
+    "emailDescription": "실제 메일은 가지 않아요. 그 사람이 이 이메일로 가입하거나 로그인하면 앱 안에서 초대가 보여요."
   }
 }

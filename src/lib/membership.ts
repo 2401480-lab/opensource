@@ -30,7 +30,9 @@ export class MembershipError extends Error {
       | 'PARTICIPANT_TAKEN'
       | 'PARTICIPANT_NOT_FOUND'
       | 'DUPLICATE_NAME'
-      | 'NOT_OWNER',
+      | 'NOT_OWNER'
+      | 'INVITE_NOT_FOR_YOU'
+      | 'EMAIL_ALREADY_MEMBER',
     message?: string,
   ) {
     super(message ?? code)
@@ -281,6 +283,240 @@ export async function joinGroupWithInvite(
       actorUserId: userId,
     })
   return { groupId: invite.groupId, membership: result.membership }
+}
+
+// ── Email invites (shown in the app, no mail is sent) ──
+
+export function normalizeEmail(email: string) {
+  return email.trim().toLowerCase()
+}
+
+/**
+ * Refuses emails that belong to someone who is already a member of the group
+ * (or, for a new group, to its creator). Run before saving the group form so a
+ * bad email does not leave a half-saved form.
+ */
+export async function checkInviteEmails({
+  groupId,
+  inviterEmail,
+  emails,
+}: {
+  groupId: string | null
+  inviterEmail: string
+  emails: string[]
+}) {
+  if (emails.length === 0) return
+  const memberEmails = new Set([normalizeEmail(inviterEmail)])
+  if (groupId) {
+    const members = await prisma.participant.findMany({
+      where: { groupId, userId: { not: null } },
+      select: { user: { select: { email: true } } },
+    })
+    for (const { user } of members)
+      if (user) memberEmails.add(normalizeEmail(user.email))
+  }
+  const taken = emails.map(normalizeEmail).find((e) => memberEmails.has(e))
+  if (taken) throw new MembershipError('EMAIL_ALREADY_MEMBER', taken)
+}
+
+/**
+ * Makes the group's pending invites match the given participant -> email
+ * entries: a new email replaces the previous invite, an empty one cancels it.
+ * Participants already linked to an account are ignored. An email has at most
+ * one pending invite per group.
+ */
+export async function syncEmailInvites(
+  groupId: string,
+  inviterUserId: string,
+  entries: { participantId: string; email: string | null | undefined }[],
+) {
+  if (entries.length === 0) return
+  await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT "id" FROM "Group" WHERE "id" = ${groupId} FOR UPDATE`
+    const participants = await tx.participant.findMany({
+      where: { groupId, id: { in: entries.map((e) => e.participantId) } },
+      select: { id: true, userId: true },
+    })
+    const now = new Date()
+    for (const entry of entries) {
+      const participant = participants.find((p) => p.id === entry.participantId)
+      if (!participant || participant.userId !== null) continue
+      const email = entry.email ? normalizeEmail(entry.email) : null
+      const current = await tx.groupEmailInvite.findFirst({
+        where: { participantId: participant.id, status: 'PENDING' },
+        select: { id: true, email: true },
+      })
+      if (current && current.email === email) continue
+      await tx.groupEmailInvite.updateMany({
+        where: {
+          groupId,
+          status: 'PENDING',
+          OR: [
+            { participantId: participant.id },
+            ...(email ? [{ email }] : []),
+          ],
+        },
+        data: { status: 'CANCELED', respondedAt: now },
+      })
+      if (email)
+        await tx.groupEmailInvite.create({
+          data: {
+            id: randomId(),
+            groupId,
+            participantId: participant.id,
+            email,
+            invitedByUserId: inviterUserId,
+          },
+        })
+    }
+  })
+}
+
+/** Invites one participant who has not joined yet (members page). */
+export async function sendEmailInvite({
+  groupId,
+  inviter,
+  participantId,
+  email,
+}: {
+  groupId: string
+  inviter: { id: string; email: string }
+  participantId: string
+  email: string
+}) {
+  const participant = await prisma.participant.findFirst({
+    where: { id: participantId, groupId },
+    select: { userId: true },
+  })
+  if (!participant) throw new MembershipError('PARTICIPANT_NOT_FOUND')
+  if (participant.userId !== null)
+    throw new MembershipError('PARTICIPANT_TAKEN')
+  await checkInviteEmails({
+    groupId,
+    inviterEmail: inviter.email,
+    emails: [email],
+  })
+  await syncEmailInvites(groupId, inviter.id, [{ participantId, email }])
+}
+
+export async function cancelEmailInvite(groupId: string, inviteId: string) {
+  const { count } = await prisma.groupEmailInvite.updateMany({
+    where: { id: inviteId, groupId, status: 'PENDING' },
+    data: { status: 'CANCELED', respondedAt: new Date() },
+  })
+  if (count === 0) throw new MembershipError('INVITE_INVALID')
+}
+
+/** Pending invites of the group, by participant (for its members). */
+export async function getPendingInviteEmails(groupId: string) {
+  const invites = await prisma.groupEmailInvite.findMany({
+    where: { groupId, status: 'PENDING', participant: { userId: null } },
+    select: { id: true, participantId: true, email: true },
+  })
+  return new Map(invites.map((i) => [i.participantId, i]))
+}
+
+/** Invites waiting for the signed-in user (matched on their account email). */
+export async function listReceivedInvites(user: { id: string; email: string }) {
+  const invites = await prisma.groupEmailInvite.findMany({
+    where: {
+      email: normalizeEmail(user.email),
+      status: 'PENDING',
+      participant: { userId: null },
+      group: {
+        deleteAt: null,
+        participants: { none: { userId: user.id } },
+      },
+    },
+    select: {
+      id: true,
+      createdAt: true,
+      group: { select: { id: true, name: true } },
+      participant: { select: { name: true } },
+      invitedBy: { select: { name: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  })
+  return invites.map((invite) => ({
+    id: invite.id,
+    createdAt: invite.createdAt.toISOString(),
+    groupId: invite.group.id,
+    groupName: invite.group.name,
+    participantName: invite.participant.name,
+    invitedByName: invite.invitedBy.name,
+  }))
+}
+
+async function getInviteForUser(
+  inviteId: string,
+  user: { id: string; email: string },
+) {
+  const invite = await prisma.groupEmailInvite.findUnique({
+    where: { id: inviteId },
+    select: { groupId: true, participantId: true, email: true, status: true },
+  })
+  if (!invite || invite.status !== 'PENDING')
+    throw new MembershipError('INVITE_INVALID')
+  if (invite.email !== normalizeEmail(user.email))
+    throw new MembershipError('INVITE_NOT_FOR_YOU')
+  return invite
+}
+
+/** Joins the group as the invited participant. */
+export async function acceptEmailInvite(
+  inviteId: string,
+  user: { id: string; email: string },
+) {
+  const invite = await getInviteForUser(inviteId, user)
+  const closeInvite = () =>
+    prisma.groupEmailInvite.updateMany({
+      where: { id: inviteId, status: 'PENDING' },
+      data: { status: 'CANCELED', respondedAt: new Date() },
+    })
+  let result: Awaited<ReturnType<typeof linkUser>>
+  try {
+    result = await linkUser({
+      groupId: invite.groupId,
+      userId: user.id,
+      choice: { participantId: invite.participantId },
+      role: 'MEMBER',
+      precondition: async (tx) => {
+        const { count } = await tx.groupEmailInvite.updateMany({
+          where: { id: inviteId, status: 'PENDING' },
+          data: { status: 'ACCEPTED', respondedAt: new Date() },
+        })
+        if (count === 0) throw new MembershipError('INVITE_INVALID')
+      },
+    })
+  } catch (error) {
+    // Someone else took that participant meanwhile: the invite is void.
+    if (
+      error instanceof MembershipError &&
+      (error.code === 'PARTICIPANT_TAKEN' ||
+        error.code === 'PARTICIPANT_NOT_FOUND')
+    )
+      await closeInvite()
+    throw error
+  }
+  if (result.joined)
+    await logActivity(invite.groupId, ActivityType.JOIN_GROUP, {
+      participantId: result.membership.participantId,
+      actorUserId: user.id,
+    })
+  // Already a member (e.g. joined with the link): the invite is not needed.
+  else await closeInvite()
+  return { groupId: invite.groupId, membership: result.membership }
+}
+
+export async function declineEmailInvite(
+  inviteId: string,
+  user: { id: string; email: string },
+) {
+  await getInviteForUser(inviteId, user)
+  await prisma.groupEmailInvite.updateMany({
+    where: { id: inviteId, status: 'PENDING' },
+    data: { status: 'DECLINED', respondedAt: new Date() },
+  })
 }
 
 // ── My groups ──

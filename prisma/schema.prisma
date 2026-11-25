@@ -14,37 +14,39 @@ datasource db {
 }
 
 model Group {
-  id           String        @id
+  id           String             @id
   name         String
-  information  String?       @db.Text
-  currency     String        @default("$")
+  information  String?            @db.Text
+  currency     String             @default("$")
   currencyCode String?
   participants Participant[]
   expenses     Expense[]
   activities   Activity[]
   invites      GroupInvite[]
+  emailInvites GroupEmailInvite[]
   settlements  Settlement[]
-  createdAt    DateTime      @default(now())
+  createdAt    DateTime           @default(now())
   deleteAt     DateTime?
 }
 
 model Participant {
-  id              String           @id
-  name            String
-  group           Group            @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  groupId         String
-  expensesPaidBy  Expense[]
-  expensesPaidFor ExpensePaidFor[]
-  settlementsSent     Settlement[] @relation("SettlementFrom")
-  settlementsReceived Settlement[] @relation("SettlementTo")
+  id                  String           @id
+  name                String
+  group               Group            @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId             String
+  expensesPaidBy      Expense[]
+  expensesPaidFor     ExpensePaidFor[]
+  settlementsSent     Settlement[]     @relation("SettlementFrom")
+  settlementsReceived Settlement[]     @relation("SettlementTo")
 
   // The account this participant belongs to. Null for participants nobody has
   // claimed yet, which includes every participant created before accounts
   // existed: they are never linked automatically (e.g. by name), only when a
   // signed-in user explicitly picks them.
-  user            User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
-  userId          String?
-  role            GroupRole        @default(MEMBER)
+  user         User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId       String?
+  role         GroupRole          @default(MEMBER)
+  emailInvites GroupEmailInvite[]
 
   // One account is at most one participant of a given group.
   @@unique([groupId, userId])
@@ -67,6 +69,35 @@ model GroupInvite {
   revokedAt       DateTime?
 
   @@index([groupId])
+}
+
+enum EmailInviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CANCELED
+}
+
+// An invitation for one participant of a group, addressed to an email. It is
+// shown inside the app to the account with that email (no mail is sent); when
+// accepted, that account is linked to exactly this participant.
+model GroupEmailInvite {
+  id              String            @id
+  group           Group             @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId         String
+  participant     Participant       @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  participantId   String
+  // Stored trimmed and lower-cased.
+  email           String
+  invitedBy       User              @relation(fields: [invitedByUserId], references: [id], onDelete: Cascade)
+  invitedByUserId String
+  status          EmailInviteStatus @default(PENDING)
+  createdAt       DateTime          @default(now())
+  respondedAt     DateTime?
+
+  @@index([email, status])
+  @@index([groupId, status])
+  @@index([participantId])
 }
 
 model Category {
@@ -102,7 +133,7 @@ model Expense {
   recurringExpenseLinkId String?
 
   // Set on the transfer record created when a settlement is confirmed.
-  settlement             Settlement?
+  settlement Settlement?
 }
 
 model ExpenseDocument {
@@ -191,17 +222,18 @@ enum ActivityType {
 // ── Authentication (tables used by better-auth, see src/lib/auth.ts) ──
 
 model User {
-  id            String        @id
+  id            String             @id
   name          String
-  email         String        @unique
-  emailVerified Boolean       @default(false)
+  email         String             @unique
+  emailVerified Boolean            @default(false)
   image         String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
   sessions      Session[]
   accounts      Account[]
   participants  Participant[]
   invites       GroupInvite[]
+  emailInvites  GroupEmailInvite[]
 
   @@map("user")
 }
@@ -260,34 +292,34 @@ model Verification {
 // statistics code keeps working unchanged. ──
 
 enum SettlementStatus {
-  PENDING   // sender recorded the transfer, waiting for the recipient
+  PENDING // sender recorded the transfer, waiting for the recipient
   CONFIRMED // recipient confirmed they received it
-  REJECTED  // recipient says they did not receive it
-  CANCELED  // sender withdrew the request
+  REJECTED // recipient says they did not receive it
+  CANCELED // sender withdrew the request
 }
 
 model Settlement {
-  id                String           @id
-  group             Group            @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  id                String               @id
+  group             Group                @relation(fields: [groupId], references: [id], onDelete: Cascade)
   groupId           String
-  from              Participant      @relation("SettlementFrom", fields: [fromParticipantId], references: [id], onDelete: Cascade)
+  from              Participant          @relation("SettlementFrom", fields: [fromParticipantId], references: [id], onDelete: Cascade)
   fromParticipantId String
-  to                Participant      @relation("SettlementTo", fields: [toParticipantId], references: [id], onDelete: Cascade)
+  to                Participant          @relation("SettlementTo", fields: [toParticipantId], references: [id], onDelete: Cascade)
   toParticipantId   String
   // In the group currency, minor units.
   amount            Int
-  paidAt            DateTime         @db.Date
+  paidAt            DateTime             @db.Date
   note              String?
-  status            SettlementStatus @default(PENDING)
+  status            SettlementStatus     @default(PENDING)
   requestedByUserId String
   respondedByUserId String?
   respondedAt       DateTime?
   rejectReason      String?
-  expense           Expense?         @relation(fields: [expenseId], references: [id], onDelete: SetNull)
-  expenseId         String?          @unique
+  expense           Expense?             @relation(fields: [expenseId], references: [id], onDelete: SetNull)
+  expenseId         String?              @unique
   documents         SettlementDocument[]
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
 
   @@index([groupId, status])
 }

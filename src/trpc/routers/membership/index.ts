@@ -1,9 +1,12 @@
 import {
+  acceptEmailInvite,
   claimUnclaimedGroup,
+  declineEmailInvite,
   getGroupAccess,
   getInviteDetails,
   getJoinableGroup,
   joinGroupWithInvite,
+  listReceivedInvites,
   MembershipError,
 } from '@/lib/membership'
 import { createTRPCRouter, protectedProcedure } from '@/trpc/init'
@@ -15,7 +18,7 @@ const choiceSchema = z.union([
   z.object({ newName: z.string().trim().min(2).max(50) }),
 ])
 
-function toTRPCError(error: unknown): never {
+export function toTRPCError(error: unknown): never {
   if (error instanceof MembershipError) {
     const code = (
       {
@@ -26,6 +29,8 @@ function toTRPCError(error: unknown): never {
         PARTICIPANT_TAKEN: 'CONFLICT',
         DUPLICATE_NAME: 'CONFLICT',
         NOT_OWNER: 'FORBIDDEN',
+        INVITE_NOT_FOR_YOU: 'FORBIDDEN',
+        EMAIL_ALREADY_MEMBER: 'CONFLICT',
       } as const
     )[error.code]
     throw new TRPCError({ code, message: error.code })
@@ -74,6 +79,31 @@ export const membershipRouter = createTRPCRouter({
           choice,
         )
         return { groupId, membership }
+      } catch (error) {
+        toTRPCError(error)
+      }
+    }),
+
+  /** Invites addressed to the signed-in user's email. */
+  receivedInvites: protectedProcedure.query(async ({ ctx }) => ({
+    invites: await listReceivedInvites(ctx.user),
+  })),
+
+  acceptInvite: protectedProcedure
+    .input(z.object({ inviteId: z.string().min(1).max(64) }))
+    .mutation(async ({ ctx, input: { inviteId } }) => {
+      try {
+        return await acceptEmailInvite(inviteId, ctx.user)
+      } catch (error) {
+        toTRPCError(error)
+      }
+    }),
+
+  declineInvite: protectedProcedure
+    .input(z.object({ inviteId: z.string().min(1).max(64) }))
+    .mutation(async ({ ctx, input: { inviteId } }) => {
+      try {
+        await declineEmailInvite(inviteId, ctx.user)
       } catch (error) {
         toTRPCError(error)
       }

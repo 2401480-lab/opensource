@@ -16,6 +16,7 @@ import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { GlobalBalanceCard } from './global-balance-card'
+import { ReceivedInvites } from './received-invites'
 
 type MyGroups = AppRouterOutput['groups']['list']['groups']
 
@@ -59,6 +60,8 @@ export function MyGroupList() {
         </div>
       </div>
 
+      <ReceivedInvites />
+
       {isError ? (
         <div className="text-sm space-y-2">
           <p>{t('loadError')}</p>
@@ -71,12 +74,10 @@ export function MyGroupList() {
           <Loader2 className="w-4 m-4 mr-2 inline animate-spin" />
           {tGroups('loadingRecent')}
         </p>
+      ) : data.groups.length === 0 ? (
+        <EmptyState />
       ) : (
-        data.groups.length === 0 ? (
-          <EmptyState />
-        ) : (
-          <Groups groups={data.groups} prefs={prefs} refresh={loadPrefs} />
-        )
+        <Groups groups={data.groups} prefs={prefs} refresh={loadPrefs} />
       )}
     </>
   )

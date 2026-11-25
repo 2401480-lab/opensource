@@ -26,7 +26,10 @@ export async function createGroup(
   groupFormValues: GroupFormValues,
   creatorUserId?: string,
 ) {
-  return prisma.group.create({
+  // Ids are made here so callers can tell which row of the form became which
+  // participant (`formParticipantIds`, in form order).
+  const formParticipantIds = groupFormValues.participants.map(() => randomId())
+  const group = await prisma.group.create({
     data: {
       id: randomId(),
       name: groupFormValues.name,
@@ -36,7 +39,7 @@ export async function createGroup(
       participants: {
         createMany: {
           data: groupFormValues.participants.map(({ name }, index) => ({
-            id: randomId(),
+            id: formParticipantIds[index],
             name,
             ...(creatorUserId && index === 0
               ? { userId: creatorUserId, role: 'OWNER' as const }
@@ -47,6 +50,7 @@ export async function createGroup(
     },
     include: { participants: true },
   })
+  return { ...group, formParticipantIds }
 }
 
 export async function createExpense(
@@ -390,7 +394,12 @@ export async function updateGroup(
     actorUserId: actor?.userId,
   })
 
-  return prisma.group.update({
+  // Existing rows keep their id; new rows get one here (see createGroup).
+  const formParticipantIds = groupFormValues.participants.map(
+    (participant) => participant.id ?? randomId(),
+  )
+
+  const group = await prisma.group.update({
     where: { id: groupId },
     data: {
       name: groupFormValues.name,
@@ -411,15 +420,20 @@ export async function updateGroup(
           })),
         createMany: {
           data: groupFormValues.participants
-            .filter((participant) => participant.id === undefined)
-            .map((participant) => ({
-              id: randomId(),
+            .map((participant, index) => ({
+              participant,
+              id: formParticipantIds[index],
+            }))
+            .filter(({ participant }) => participant.id === undefined)
+            .map(({ participant, id }) => ({
+              id,
               name: participant.name,
             })),
         },
       },
     },
   })
+  return { ...group, formParticipantIds }
 }
 
 export async function getGroup(groupId: string) {

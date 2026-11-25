@@ -1,4 +1,4 @@
-import { expenseFormSchema } from './schemas'
+import { expenseFormSchema, groupFormSchema } from './schemas'
 
 function byAmountExpense(amount: string, shares: string[]) {
   return {
@@ -58,5 +58,48 @@ describe('expenseFormSchema, split by amount', () => {
       'noZeroShares',
       'amountSum',
     ])
+  })
+})
+
+describe('groupFormSchema, participant emails', () => {
+  const group = (participants: { name: string; email?: string }[]) => ({
+    name: 'Trip',
+    currency: '$',
+    currencyCode: 'USD',
+    participants,
+  })
+
+  it('accepts no email or an empty one, and normalizes a given one', () => {
+    const result = groupFormSchema.parse(
+      group([
+        { name: 'Alice' },
+        { name: 'Bob', email: '' },
+        { name: 'Carol', email: '  Carol@Example.COM ' },
+      ]),
+    )
+    expect(result.participants[2].email).toBe('carol@example.com')
+  })
+
+  it('rejects an invalid email', () => {
+    const result = groupFormSchema.safeParse(
+      group([{ name: 'Alice' }, { name: 'Bob', email: 'not-an-email' }]),
+    )
+    expect(result.success).toBe(false)
+    expect(result.error?.issues[0].message).toBe('invalidEmail')
+  })
+
+  it('rejects the same email for two participants', () => {
+    const result = groupFormSchema.safeParse(
+      group([
+        { name: 'Alice' },
+        { name: 'Bob', email: 'x@example.com' },
+        { name: 'Carol', email: 'X@example.com' },
+      ]),
+    )
+    expect(result.success).toBe(false)
+    expect(result.error?.issues[0]).toMatchObject({
+      message: 'duplicateParticipantEmail',
+      path: ['participants', 2, 'email'],
+    })
   })
 })

@@ -16,6 +16,14 @@ export const groupFormSchema = z
         z.object({
           id: z.string().max(64).optional(),
           name: z.string().min(2, 'min2').max(50, 'max50'),
+          // Optional: invites this participant, inside the app, to the account
+          // with this email.
+          email: z
+            .union([
+              z.literal(''),
+              z.string().trim().toLowerCase().max(254).email('invalidEmail'),
+            ])
+            .optional(),
         }),
       )
       .min(1)
@@ -29,6 +37,13 @@ export const groupFormSchema = z
             code: 'custom',
             message: 'duplicateParticipantName',
             path: ['participants', i, 'name'],
+          })
+        }
+        if (participant.email && otherParticipant.email === participant.email) {
+          ctx.addIssue({
+            code: 'custom',
+            message: 'duplicateParticipantEmail',
+            path: ['participants', i, 'email'],
           })
         }
       })
