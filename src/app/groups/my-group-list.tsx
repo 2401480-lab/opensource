@@ -3,8 +3,8 @@
 import { AddGroupByUrlButton } from '@/app/groups/add-group-by-url-button'
 import { MyGroupCard } from '@/app/groups/my-group-card'
 import {
+  clearLegacyDeviceData,
   getArchivedGroups,
-  getRecentGroups,
   getStarredGroups,
 } from '@/app/groups/recent-groups-helpers'
 import { Button } from '@/components/ui/button'
@@ -32,16 +32,17 @@ export function MyGroupList() {
   const [prefs, setPrefs] = useState<{
     starred: string[]
     archived: string[]
-    deviceGroupIds: string[]
   } | null>(null)
   const loadPrefs = useCallback(() => {
     setPrefs({
       starred: getStarredGroups(),
       archived: getArchivedGroups(),
-      deviceGroupIds: getRecentGroups().map((group) => group.id),
     })
   }, [])
-  useEffect(() => loadPrefs(), [loadPrefs])
+  useEffect(() => {
+    clearLegacyDeviceData()
+    loadPrefs()
+  }, [loadPrefs])
 
   return (
     <>
@@ -71,17 +72,11 @@ export function MyGroupList() {
           {tGroups('loadingRecent')}
         </p>
       ) : (
-        <>
-          <ImportBanner
-            groups={data.groups}
-            deviceGroupIds={prefs.deviceGroupIds}
-          />
-          {data.groups.length === 0 ? (
-            <EmptyState />
-          ) : (
-            <Groups groups={data.groups} prefs={prefs} refresh={loadPrefs} />
-          )}
-        </>
+        data.groups.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <Groups groups={data.groups} prefs={prefs} refresh={loadPrefs} />
+        )
       )}
     </>
   )
@@ -161,27 +156,5 @@ function EmptyState() {
         </div>
       </CardContent>
     </Card>
-  )
-}
-
-/** Groups this browser remembers from before accounts, not linked yet. */
-function ImportBanner({
-  groups,
-  deviceGroupIds,
-}: {
-  groups: MyGroups
-  deviceGroupIds: string[]
-}) {
-  const t = useTranslations('MyGroups.import')
-  const mine = new Set(groups.map((g) => g.id))
-  const count = deviceGroupIds.filter((id) => !mine.has(id)).length
-  if (count === 0) return null
-  return (
-    <div className="rounded-lg border border-dashed p-3 text-sm flex flex-col sm:flex-row sm:items-center gap-2 justify-between">
-      <span>{t('banner', { count })}</span>
-      <Button variant="secondary" size="sm" asChild>
-        <Link href="/groups/import">{t('action')}</Link>
-      </Button>
-    </div>
   )
 }

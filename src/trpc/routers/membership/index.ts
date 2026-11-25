@@ -1,4 +1,3 @@
-import { MAX_GROUPS_PER_QUERY } from '@/lib/group-query-limits'
 import {
   claimUnclaimedGroup,
   getGroupAccess,
@@ -61,23 +60,6 @@ export const membershipRouter = createTRPCRouter({
       const access = await getGroupAccess(groupId, ctx.user.id)
       if (access.status !== 'unclaimed') return { group: null, access }
       return { group: await getJoinableGroup(groupId), access }
-    }),
-
-  /** For groups this device remembers: is the user a member, can they claim it? */
-  accessList: protectedProcedure
-    .input(
-      z.object({
-        groupIds: z.array(z.string().min(1).max(64)).max(MAX_GROUPS_PER_QUERY),
-      }),
-    )
-    .query(async ({ ctx, input: { groupIds } }) => {
-      const statuses = await Promise.all(
-        groupIds.map(async (groupId) => ({
-          groupId,
-          status: (await getGroupAccess(groupId, ctx.user.id)).status,
-        })),
-      )
-      return { statuses }
     }),
 
   claim: protectedProcedure

@@ -23,9 +23,8 @@ function intFromEnv(name: string, fallback: number): number {
 
 export const config = {
   /**
-   * How many groups the seeder creates, and therefore how many ids the home
-   * screen sends to `groups.list` / `groups.balances.forUser`. 20 is a busy but
-   * realistic `recentGroups` local-storage list.
+   * How many groups the seeder creates (all of them joined by the perf user,
+   * so the home screen's `groups.list` returns every one).
    */
   groups: intFromEnv('PERF_GROUPS', 20),
 

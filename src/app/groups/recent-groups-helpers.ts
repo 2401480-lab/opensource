@@ -1,62 +1,26 @@
 import { z } from 'zod'
 
-export const recentGroupsSchema = z.array(
-  z.object({
-    id: z.string().min(1),
-    name: z.string(),
-  }),
-)
-
 export const starredGroupsSchema = z.array(z.string())
 export const archivedGroupsSchema = z.array(z.string())
 
-export type RecentGroups = z.infer<typeof recentGroupsSchema>
-export type RecentGroup = RecentGroups[number]
-
-const STORAGE_KEY = 'recentGroups'
 const STARRED_GROUPS_STORAGE_KEY = 'starredGroups'
 const ARCHIVED_GROUPS_STORAGE_KEY = 'archivedGroups'
 
-export function getRecentGroups() {
-  const groupsInStorageJson = localStorage.getItem(STORAGE_KEY)
-  const groupsInStorageRaw = groupsInStorageJson
-    ? JSON.parse(groupsInStorageJson)
-    : []
-  const parseResult = recentGroupsSchema.safeParse(groupsInStorageRaw)
-  return parseResult.success ? parseResult.data : []
-}
-
-export function saveRecentGroup(group: RecentGroup) {
-  const recentGroups = getRecentGroups()
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify([group, ...recentGroups.filter((rg) => rg.id !== group.id)]),
-  )
-}
-
-export function deleteRecentGroup(group: RecentGroup) {
-  const recentGroups = getRecentGroups()
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify(recentGroups.filter((rg) => rg.id !== group.id)),
-  )
-}
-
-/** Forgets groups that no longer exist, including their starred and archived flags. */
-export function forgetGroups(groupIds: string[]) {
-  const forgotten = new Set(groupIds)
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify(getRecentGroups().filter((rg) => !forgotten.has(rg.id))),
-  )
-  localStorage.setItem(
-    STARRED_GROUPS_STORAGE_KEY,
-    JSON.stringify(getStarredGroups().filter((id) => !forgotten.has(id))),
-  )
-  localStorage.setItem(
-    ARCHIVED_GROUPS_STORAGE_KEY,
-    JSON.stringify(getArchivedGroups().filter((id) => !forgotten.has(id))),
-  )
+/**
+ * Before accounts, the list of "my groups" and who "I" am in each group were
+ * kept in the browser. Both now come from the account (database), so the old
+ * browser copies are removed.
+ */
+export function clearLegacyDeviceData() {
+  try {
+    localStorage.removeItem('recentGroups')
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i)
+      if (key?.endsWith('-activeUser')) localStorage.removeItem(key)
+    }
+  } catch {
+    // Storage unavailable (private mode): nothing to clean up.
+  }
 }
 
 export function getStarredGroups() {
