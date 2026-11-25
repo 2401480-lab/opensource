@@ -1,3 +1,4 @@
+import { requireGroupMemberForRoute } from '@/lib/membership'
 import { prisma } from '@/lib/prisma'
 import { create as contentDisposition } from 'content-disposition'
 import { NextResponse } from 'next/server'
@@ -7,6 +8,8 @@ export async function GET(
   { params }: { params: Promise<{ groupId: string }> },
 ) {
   const { groupId } = await params
+  const access = await requireGroupMemberForRoute(groupId)
+  if ('response' in access) return access.response
   const group = await prisma.group.findUnique({
     where: { id: groupId },
     select: {

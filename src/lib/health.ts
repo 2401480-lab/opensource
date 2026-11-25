@@ -3,6 +3,10 @@ import { prisma } from '@/lib/prisma'
 export interface HealthCheckStatus {
   status: 'healthy' | 'unhealthy'
   services?: {
+    configuration?: {
+      status: 'healthy' | 'unhealthy'
+      error?: string
+    }
     database?: {
       status: 'healthy' | 'unhealthy'
       error?: string
@@ -42,7 +46,34 @@ function createHealthResponse(
   })
 }
 
+/**
+ * Whether the environment passes validation (src/lib/env.ts), e.g. that
+ * BETTER_AUTH_SECRET is set. Imported lazily so a bad configuration makes the
+ * app report itself unready instead of crashing this route.
+ */
+async function checkConfiguration(): Promise<{
+  status: 'healthy' | 'unhealthy'
+  error?: string
+}> {
+  try {
+    await import('@/lib/env')
+    return { status: 'healthy' }
+  } catch (error) {
+    return {
+      status: 'unhealthy',
+      error: error instanceof Error ? error.message : 'Invalid configuration',
+    }
+  }
+}
+
 export async function checkReadiness(): Promise<Response> {
+  const configuration = await checkConfiguration()
+  if (configuration.status === 'unhealthy')
+    return createHealthResponse(
+      { status: 'unhealthy', services: { configuration } },
+      false,
+    )
+
   try {
     const databaseStatus = await checkDatabase()
 

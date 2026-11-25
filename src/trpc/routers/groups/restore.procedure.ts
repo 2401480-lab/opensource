@@ -1,14 +1,13 @@
 import { restoreGroup } from '@/lib/api'
-import { baseProcedure } from '@/trpc/init'
+import { groupOwnerProcedure } from '@/trpc/init'
 import { z } from 'zod'
 
-export const restoreGroupProcedure = baseProcedure
+export const restoreGroupProcedure = groupOwnerProcedure
   .input(
     z.object({
       groupId: z.string().min(1),
-      participantId: z.string().optional(),
     }),
   )
-  .mutation(async ({ input: { groupId, participantId } }) => {
-    await restoreGroup(groupId, participantId)
+  .mutation(async ({ ctx, input: { groupId } }) => {
+    await restoreGroup(groupId, ctx.actor)
   })

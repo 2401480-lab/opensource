@@ -56,27 +56,31 @@ test('renames a group and adds a participant afterwards', async ({ page }) => {
   await expectBalance(page, 'Dave', 60)
 })
 
-test('lists visited groups under Recent groups', async ({ page }) => {
-  const first = `E2E Recent A ${uniqueSuffix()}`
-  const second = `E2E Recent B ${uniqueSuffix()}`
+test('lists the groups I am a member of, with what I have to settle', async ({
+  page,
+}) => {
+  const first = `E2E Mine A ${uniqueSuffix()}`
+  const second = `E2E Mine B ${uniqueSuffix()}`
 
   await createGroup(page, { name: first, participants: ['Alice', 'Bob'] })
   await createGroup(page, { name: second, participants: ['Alice', 'Bob'] })
 
   await page.goto('/groups')
-  await expect(
-    page.getByRole('heading', { name: 'Recent groups' }),
-  ).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'My groups' })).toBeVisible()
   await expect(page.getByRole('link', { name: first })).toBeVisible()
   await expect(page.getByRole('link', { name: second })).toBeVisible()
+  await expect(page.getByTestId('group-status').first()).toContainText(
+    'Nothing to settle',
+  )
 })
 
-test('shows no recent groups in a fresh browser profile', async ({ page }) => {
-  // Recent groups live in localStorage, so a new context must start empty even
-  // though other tests have created groups on the same database.
+test('shows how to start for a user without groups', async ({ page }) => {
+  // Groups belong to accounts: a new user sees none, although other tests
+  // have created groups on the same database.
   await page.goto('/groups')
+  await expect(page.getByText('You are not in any group yet')).toBeVisible()
   await expect(
-    page.getByText('You have not visited any group recently.'),
+    page.getByRole('link', { name: 'Create a group' }).first(),
   ).toBeVisible()
 })
 
@@ -98,8 +102,9 @@ test('records group and expense changes in the activity log', async ({
 
   const activity = page.getByText(/Expense .*Cinema.* created by/)
   await expect(activity).toBeVisible()
-  // The active user is 'None', so the actor renders as the generic fallback.
-  await expect(activity).toContainText('Someone')
+  // The actor is the signed-in member, recorded by the server (it used to be
+  // "Someone" unless a per-device active user had been picked).
+  await expect(activity).toContainText('Alice')
 })
 
 test('exports the expenses as JSON', async ({ page }) => {

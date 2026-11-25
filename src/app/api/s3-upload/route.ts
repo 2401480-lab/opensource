@@ -1,8 +1,9 @@
 import { randomId } from '@/lib/api'
+import { getCurrentUser } from '@/lib/auth'
 import { env } from '@/lib/env'
 import { POST as route } from 'next-s3-upload/route'
 
-export const POST = route.configure({
+const upload = route.configure({
   key(req, filename) {
     const [, extension] = filename.match(/(\.[^\.]*)$/) ?? [null, '']
     const timestamp = new Date().toISOString()
@@ -13,3 +14,10 @@ export const POST = route.configure({
   // forcing path style is only necessary for providers other than AWS
   forcePathStyle: !!env.S3_UPLOAD_ENDPOINT,
 })
+
+// Only signed-in users may upload documents.
+export async function POST(request: Request) {
+  if (!(await getCurrentUser()))
+    return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  return upload(request as Parameters<typeof upload>[0])
+}

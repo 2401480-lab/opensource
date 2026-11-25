@@ -32,6 +32,9 @@ services:
       # else in the repository sets this. Read at runtime, not baked into the
       # image, so the Dockerfile needs no build argument for it.
       PERF_INSTRUMENTATION: '1'
+      # Throwaway values for the disposable perf stack only.
+      BETTER_AUTH_SECRET: perf-only-secret-not-for-production-0123456789
+      BASE_URL: http://localhost:${PERF_HOST_PORT:-3100}
     restart: 'no'
     depends_on:
       db:

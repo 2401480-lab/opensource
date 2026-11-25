@@ -198,15 +198,9 @@ export function ExpenseForm({
   /** Whether the form was opened from a suggested reimbursement ("Mark as paid"). */
   const isRepayment = isCreate && !!searchParams.get('reimbursement')
 
-  const getSelectedPayer = (field?: { value: string }) => {
-    if (isCreate && typeof window !== 'undefined') {
-      const activeUser = localStorage.getItem(`${group.id}-activeUser`)
-      if (activeUser && activeUser !== 'None' && field?.value === undefined) {
-        return activeUser
-      }
-    }
-    return field?.value
-  }
+  // The signed-in member: who paid, by default, for a new expense.
+  const activeUserId = useActiveUser(group.id)
+  const getSelectedPayer = () => activeUserId ?? undefined
 
   const getSelectedRecurrenceRule = (field?: { value?: string }) => {
     return field?.value as RecurrenceRule
@@ -312,7 +306,6 @@ export function ExpenseForm({
           },
   })
   const [isCategoryLoading, setCategoryLoading] = useState(false)
-  const activeUserId = useActiveUser(group.id)
   const sendEvent = useAnalytics()
 
   const submit = async (values: ExpenseFormValues) => {
@@ -402,6 +395,27 @@ export function ExpenseForm({
    * amount to actually transfer, derived from it.
    */
   const convertFromGroupCurrency = !!form.watch('isReimbursement')
+  /**
+   * A transfer between members (opened from a suggested settlement, or an
+   * existing one being edited) rather than a shared expense. There is no
+   * checkbox for it any more: ordinary expenses are never reimbursements.
+   */
+  const isReimbursementRecord = convertFromGroupCurrency
+
+  // Optional fields are folded away unless this expense already uses one.
+  const [showMoreOptions, setShowMoreOptions] = useState(() => {
+    const values = form.getValues()
+    return (
+      (!!expense &&
+        ((expense.categoryId ?? 0) !== 0 ||
+          (!!expense.originalCurrency &&
+            expense.originalCurrency !== group.currencyCode) ||
+          (expense.recurrenceRule ?? 'NONE') !== 'NONE' ||
+          !!expense.notes ||
+          expense.documents.length > 0)) ||
+      (values.documents ?? []).length > 0
+    )
+  })
 
   useEffect(() => {
     setShareEdits(new Map())
@@ -631,15 +645,20 @@ export function ExpenseForm({
         <Card>
           <CardHeader>
             <CardTitle>
-              {t(`${sExpense}.${isCreate ? 'create' : 'edit'}`)}
+              {isReimbursementRecord
+                ? t('repayment.title')
+                : t(`${sExpense}.${isCreate ? 'create' : 'edit'}`)}
             </CardTitle>
+            {isReimbursementRecord && (
+              <CardDescription>{t('repayment.description')}</CardDescription>
+            )}
           </CardHeader>
-          <CardContent className="grid sm:grid-cols-2 gap-6">
+          <CardContent className="grid sm:grid-cols-2 gap-4">
             <FormField
               control={form.control}
               name="title"
               render={({ field }) => (
-                <FormItem className="">
+                <FormItem>
                   <FormLabel>{t(`${sExpense}.TitleField.label`)}</FormLabel>
                   <FormControl>
                     <Input
@@ -664,239 +683,15 @@ export function ExpenseForm({
                       }}
                     />
                   </FormControl>
-                  <FormDescription>
-                    {t(`${sExpense}.TitleField.description`)}
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
-            <FormField
-              control={form.control}
-              name="expenseDate"
-              render={({ field }) => (
-                <FormItem className="sm:order-1">
-                  <FormLabel>{t(`${sExpense}.DateField.label`)}</FormLabel>
-                  <FormControl>
-                    <Input
-                      className="date-base"
-                      type="date"
-                      defaultValue={formatDate(field.value as Date)}
-                      onChange={(event) => {
-                        return field.onChange(new Date(event.target.value))
-                      }}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    {t(`${sExpense}.DateField.description`)}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              name="originalCurrency"
-              render={({ field: { onChange, ...field } }) => (
-                <FormItem className="sm:order-3">
-                  <FormLabel>{t(`${sExpense}.currencyField.label`)}</FormLabel>
-                  <FormControl>
-                    {group.currencyCode ? (
-                      <CurrencySelector
-                        currencies={defaultCurrencyList(locale, '')}
-                        defaultValue={form.watch(field.name) ?? ''}
-                        isLoading={false}
-                        onValueChange={(v) => onChange(v)}
-                      />
-                    ) : (
-                      <Input
-                        className="text-base"
-                        disabled={true}
-                        {...field}
-                        placeholder={group.currency}
-                      />
-                    )}
-                  </FormControl>
-                  <FormDescription>
-                    {t(`${sExpense}.currencyField.description`)}{' '}
-                    {!group.currencyCode && t('conversionUnavailable')}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div
-              className={cn(
-                convertFromGroupCurrency ? 'sm:order-5' : 'sm:order-4',
-                !conversionRequired && 'max-sm:hidden sm:invisible',
-                'col-span-2 md:col-span-1 space-y-2',
-              )}
-            >
-              <FormField
-                control={form.control}
-                name="originalAmount"
-                render={({ field: { onChange, ...field } }) => (
-                  <FormItem>
-                    <FormLabel>
-                      {t(
-                        convertFromGroupCurrency
-                          ? 'originalAmountField.repaymentLabel'
-                          : 'originalAmountField.label',
-                      )}
-                    </FormLabel>
-                    <div className="flex items-baseline gap-2">
-                      <span>{originalCurrency.symbol}</span>
-                      <FormControl>
-                        <Input
-                          className={cn(
-                            'text-base max-w-[120px]',
-                            // Derived from the amount being settled: still selectable so it
-                            // can be copied, but not meant to be edited directly.
-                            convertFromGroupCurrency &&
-                              'bg-muted text-muted-foreground',
-                          )}
-                          type="text"
-                          inputMode="decimal"
-                          placeholder="0.00"
-                          readOnly={convertFromGroupCurrency}
-                          onChange={(event) => {
-                            const v = enforceCurrencyPattern(
-                              event.target.value,
-                              originalCurrency,
-                            )
-                            onChange(v)
-                          }}
-                          {...field}
-                          onFocus={(e) => {
-                            const target = e.currentTarget
-                            setTimeout(() => target.select(), 1)
-                          }}
-                        />
-                      </FormControl>
-                    </div>
-                    {convertFromGroupCurrency && (
-                      <FormDescription>
-                        {t('originalAmountField.repaymentDescription')}
-                      </FormDescription>
-                    )}
-                    <FormDescription>
-                      {isNaN(
-                        (form.getValues('expenseDate') as Date).getTime(),
-                      ) ? (
-                        t('conversionRateState.noDate')
-                      ) : form.getValues('expenseDate') &&
-                        !usingCustomConversionRate ? (
-                        <>
-                          {conversionRateMessage}
-                          {!exchangeRate.isLoading && (
-                            <Button
-                              className="h-auto py-0"
-                              // Without this the button inherits type="submit"
-                              // and refreshing the rate submits the form.
-                              type="button"
-                              variant="link"
-                              onClick={() => exchangeRate.refresh()}
-                            >
-                              {t('conversionRateState.refresh')}
-                            </Button>
-                          )}
-                        </>
-                      ) : (
-                        t('conversionRateState.customRate')
-                      )}
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Collapsible
-                open={usingCustomConversionRate}
-                onOpenChange={setUsingCustomConversionRate}
-              >
-                <CollapsibleTrigger asChild>
-                  <Button variant="link" className="-mx-4">
-                    {usingCustomConversionRate
-                      ? t('conversionRateField.useApi')
-                      : t('conversionRateField.useCustom')}
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <FormField
-                    control={form.control}
-                    name="conversionRate"
-                    render={({ field: { onChange, ...field } }) => (
-                      <FormItem
-                        className={`sm:order-4 ${
-                          !conversionRequired
-                            ? 'max-sm:hidden sm:invisible'
-                            : ''
-                        }`}
-                      >
-                        <FormLabel>{t('conversionRateField.label')}</FormLabel>
-                        <div className="flex items-baseline gap-2">
-                          <span>
-                            {originalCurrency.symbol} 1 = {group.currency}
-                          </span>
-                          <FormControl>
-                            <Input
-                              className="text-base max-w-[120px]"
-                              type="text"
-                              inputMode="decimal"
-                              placeholder="0.00"
-                              onChange={(event) => {
-                                const v = enforceCurrencyPattern(
-                                  event.target.value,
-                                )
-                                onChange(v)
-                              }}
-                              {...field}
-                              onFocus={(e) => {
-                                const target = e.currentTarget
-                                setTimeout(() => target.select(), 1)
-                              }}
-                            />
-                          </FormControl>
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </CollapsibleContent>
-              </Collapsible>
-            </div>
-            <FormField
-              control={form.control}
-              name="category"
-              render={({ field }) => (
-                <FormItem className="sm:order-2">
-                  <FormLabel>{t('categoryField.label')}</FormLabel>
-                  <CategorySelector
-                    categories={categories}
-                    defaultValue={
-                      form.watch(field.name) as number // may be overwritten externally
-                    }
-                    onValueChange={field.onChange}
-                    isLoading={isCategoryLoading}
-                  />
-                  <FormDescription>
-                    {t(`${sExpense}.categoryFieldDescription`)}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
             <FormField
               control={form.control}
               name="amount"
               render={({ field: { onChange, ...field } }) => (
-                <FormItem
-                  className={
-                    convertFromGroupCurrency ? 'sm:order-4' : 'sm:order-5'
-                  }
-                >
+                <FormItem>
                   <FormLabel>{t('amountField.label')}</FormLabel>
                   <div className="flex items-baseline gap-2">
                     <span>{group.currency}</span>
@@ -926,48 +721,38 @@ export function ExpenseForm({
                     </FormControl>
                   </div>
                   <FormMessage />
-
-                  {!isIncome && (
-                    <FormField
-                      control={form.control}
-                      name="isReimbursement"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row gap-2 items-center space-y-0 pt-2">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                          <div>
-                            <FormLabel>
-                              {t('isReimbursementField.label')}
-                            </FormLabel>
-                            {locale === 'ko' && (
-                              <FormDescription className="mt-1 max-w-md">
-                                {field.value
-                                  ? '정산은 이미 발생한 비용을 갚은 기록이에요. 소비 통계와 비용 부담자별 금액에는 포함되지 않아요.'
-                                  : '일반 소비를 기록할 때는 선택하지 마세요. 일반 지출은 전체 합계와 비용 부담자별 금액에 포함돼요.'}
-                              </FormDescription>
-                            )}
-                          </div>
-                        </FormItem>
-                      )}
-                    />
-                  )}
                 </FormItem>
               )}
             />
-
+            <FormField
+              control={form.control}
+              name="expenseDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t(`${sExpense}.DateField.label`)}</FormLabel>
+                  <FormControl>
+                    <Input
+                      className="date-base"
+                      type="date"
+                      defaultValue={formatDate(field.value as Date)}
+                      onChange={(event) => {
+                        return field.onChange(new Date(event.target.value))
+                      }}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="paidBy"
               render={({ field }) => (
-                <FormItem className="sm:order-5">
+                <FormItem>
                   <FormLabel>{t(`${sExpense}.paidByField.label`)}</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    defaultValue={getSelectedPayer(field)}
+                    defaultValue={field.value}
                   >
                     <SelectTrigger data-testid="paid-by">
                       <SelectValue
@@ -982,66 +767,6 @@ export function ExpenseForm({
                       ))}
                     </SelectContent>
                   </Select>
-                  <FormDescription>
-                    {t(`${sExpense}.paidByField.description`)}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem className="sm:order-6">
-                  <FormLabel>{t('notesField.label')}</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      className="text-base"
-                      maxLength={EXPENSE_NOTES_MAX}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="recurrenceRule"
-              render={({ field }) => (
-                <FormItem className="sm:order-5">
-                  <FormLabel>{t(`${sExpense}.recurrenceRule.label`)}</FormLabel>
-                  <Select
-                    onValueChange={(value) => {
-                      form.setValue('recurrenceRule', value as RecurrenceRule)
-                    }}
-                    defaultValue={getSelectedRecurrenceRule(field)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="NONE" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="NONE">
-                        {t(`${sExpense}.recurrenceRule.none`)}
-                      </SelectItem>
-                      <SelectItem value="DAILY">
-                        {t(`${sExpense}.recurrenceRule.daily`)}
-                      </SelectItem>
-                      <SelectItem value="WEEKLY">
-                        {t(`${sExpense}.recurrenceRule.weekly`)}
-                      </SelectItem>
-                      <SelectItem value="MONTHLY">
-                        {t(`${sExpense}.recurrenceRule.monthly`)}
-                      </SelectItem>
-                      <SelectItem value="YEARLY">
-                        {t(`${sExpense}.recurrenceRule.yearly`)}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    {t(`${sExpense}.recurrenceRule.description`)}
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -1456,7 +1181,8 @@ export function ExpenseForm({
                           </FormLabel>
                           {locale === 'ko' && (
                             <FormDescription className="mt-1 max-w-md">
-                              선택한 분할 방식과 비용 부담자 구성을 이 그룹에서 다음 지출을 만들 때 기본값으로 적용해요.
+                              선택한 분할 방식과 비용 부담자 구성을 이 그룹에서
+                              다음 지출을 만들 때 기본값으로 적용해요.
                             </FormDescription>
                           )}
                         </div>
@@ -1469,36 +1195,310 @@ export function ExpenseForm({
           </CardContent>
         </Card>
 
-        {runtimeFeatureFlags.enableExpenseDocuments && (
-          <Card className="mt-4">
-            <CardHeader>
-              <CardTitle className="flex justify-between">
-                <span>{t('attachDocuments')}</span>
-              </CardTitle>
-              <CardDescription>
-                {t(`${sExpense}.attachDescription`)}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <FormField
-                control={form.control}
-                name="documents"
-                render={({ field }) => (
-                  <ExpenseDocumentsInput
-                    documents={field.value ?? []}
-                    updateDocuments={field.onChange}
-                    onDocumentAttached={() =>
-                      sendEvent(
-                        { event: 'expense: attach document', props: {} },
-                        `/groups/${group.id}/expenses`,
-                      )
-                    }
+        <Card className="mt-4">
+          <Collapsible open={showMoreOptions} onOpenChange={setShowMoreOptions}>
+            <CollapsibleTrigger asChild>
+              <button
+                type="button"
+                className="w-full text-left p-6 flex items-center justify-between gap-2"
+              >
+                <span>
+                  <span className="block font-semibold">
+                    {t('moreOptions.title')}
+                  </span>
+                  <span className="block text-sm text-muted-foreground">
+                    {runtimeFeatureFlags.enableExpenseDocuments
+                      ? t('moreOptions.hintWithDocuments')
+                      : t('moreOptions.hint')}
+                  </span>
+                </span>
+                <ChevronRight
+                  className={cn(
+                    'w-4 h-4 flex-shrink-0 transition-transform',
+                    showMoreOptions && 'rotate-90',
+                  )}
+                />
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="grid sm:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('categoryField.label')}</FormLabel>
+                      <CategorySelector
+                        categories={categories}
+                        defaultValue={
+                          form.watch(field.name) as number // may be overwritten externally
+                        }
+                        onValueChange={field.onChange}
+                        isLoading={isCategoryLoading}
+                      />
+                      <FormDescription>
+                        {t(`${sExpense}.categoryFieldDescription`)}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  name="originalCurrency"
+                  render={({ field: { onChange, ...field } }) => (
+                    <FormItem>
+                      <FormLabel>
+                        {t(`${sExpense}.currencyField.label`)}
+                      </FormLabel>
+                      <FormControl>
+                        {group.currencyCode ? (
+                          <CurrencySelector
+                            currencies={defaultCurrencyList(locale, '')}
+                            defaultValue={form.watch(field.name) ?? ''}
+                            isLoading={false}
+                            onValueChange={(v) => onChange(v)}
+                          />
+                        ) : (
+                          <Input
+                            className="text-base"
+                            disabled={true}
+                            {...field}
+                            placeholder={group.currency}
+                          />
+                        )}
+                      </FormControl>
+                      <FormDescription>
+                        {t(`${sExpense}.currencyField.description`)}{' '}
+                        {!group.currencyCode && t('conversionUnavailable')}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div
+                  className={cn(
+                    !conversionRequired && 'hidden',
+                    'sm:col-span-2 space-y-2',
+                  )}
+                >
+                  <FormField
+                    control={form.control}
+                    name="originalAmount"
+                    render={({ field: { onChange, ...field } }) => (
+                      <FormItem>
+                        <FormLabel>
+                          {t(
+                            convertFromGroupCurrency
+                              ? 'originalAmountField.repaymentLabel'
+                              : 'originalAmountField.label',
+                          )}
+                        </FormLabel>
+                        <div className="flex items-baseline gap-2">
+                          <span>{originalCurrency.symbol}</span>
+                          <FormControl>
+                            <Input
+                              className={cn(
+                                'text-base max-w-[120px]',
+                                // Derived from the amount being settled: still selectable so it
+                                // can be copied, but not meant to be edited directly.
+                                convertFromGroupCurrency &&
+                                  'bg-muted text-muted-foreground',
+                              )}
+                              type="text"
+                              inputMode="decimal"
+                              placeholder="0.00"
+                              readOnly={convertFromGroupCurrency}
+                              onChange={(event) => {
+                                const v = enforceCurrencyPattern(
+                                  event.target.value,
+                                  originalCurrency,
+                                )
+                                onChange(v)
+                              }}
+                              {...field}
+                              onFocus={(e) => {
+                                const target = e.currentTarget
+                                setTimeout(() => target.select(), 1)
+                              }}
+                            />
+                          </FormControl>
+                        </div>
+                        {convertFromGroupCurrency && (
+                          <FormDescription>
+                            {t('originalAmountField.repaymentDescription')}
+                          </FormDescription>
+                        )}
+                        <FormDescription>
+                          {isNaN(
+                            (form.getValues('expenseDate') as Date).getTime(),
+                          ) ? (
+                            t('conversionRateState.noDate')
+                          ) : form.getValues('expenseDate') &&
+                            !usingCustomConversionRate ? (
+                            <>
+                              {conversionRateMessage}
+                              {!exchangeRate.isLoading && (
+                                <Button
+                                  className="h-auto py-0"
+                                  // Without this the button inherits type="submit"
+                                  // and refreshing the rate submits the form.
+                                  type="button"
+                                  variant="link"
+                                  onClick={() => exchangeRate.refresh()}
+                                >
+                                  {t('conversionRateState.refresh')}
+                                </Button>
+                              )}
+                            </>
+                          ) : (
+                            t('conversionRateState.customRate')
+                          )}
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
+                  <Collapsible
+                    open={usingCustomConversionRate}
+                    onOpenChange={setUsingCustomConversionRate}
+                  >
+                    <CollapsibleTrigger asChild>
+                      <Button variant="link" className="-mx-4">
+                        {usingCustomConversionRate
+                          ? t('conversionRateField.useApi')
+                          : t('conversionRateField.useCustom')}
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <FormField
+                        control={form.control}
+                        name="conversionRate"
+                        render={({ field: { onChange, ...field } }) => (
+                          <FormItem>
+                            <FormLabel>
+                              {t('conversionRateField.label')}
+                            </FormLabel>
+                            <div className="flex items-baseline gap-2">
+                              <span>
+                                {originalCurrency.symbol} 1 = {group.currency}
+                              </span>
+                              <FormControl>
+                                <Input
+                                  className="text-base max-w-[120px]"
+                                  type="text"
+                                  inputMode="decimal"
+                                  placeholder="0.00"
+                                  onChange={(event) => {
+                                    const v = enforceCurrencyPattern(
+                                      event.target.value,
+                                    )
+                                    onChange(v)
+                                  }}
+                                  {...field}
+                                  onFocus={(e) => {
+                                    const target = e.currentTarget
+                                    setTimeout(() => target.select(), 1)
+                                  }}
+                                />
+                              </FormControl>
+                            </div>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </CollapsibleContent>
+                  </Collapsible>
+                </div>
+                <FormField
+                  control={form.control}
+                  name="recurrenceRule"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        {t(`${sExpense}.recurrenceRule.label`)}
+                      </FormLabel>
+                      <Select
+                        onValueChange={(value) => {
+                          form.setValue(
+                            'recurrenceRule',
+                            value as RecurrenceRule,
+                          )
+                        }}
+                        defaultValue={getSelectedRecurrenceRule(field)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="NONE" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="NONE">
+                            {t(`${sExpense}.recurrenceRule.none`)}
+                          </SelectItem>
+                          <SelectItem value="DAILY">
+                            {t(`${sExpense}.recurrenceRule.daily`)}
+                          </SelectItem>
+                          <SelectItem value="WEEKLY">
+                            {t(`${sExpense}.recurrenceRule.weekly`)}
+                          </SelectItem>
+                          <SelectItem value="MONTHLY">
+                            {t(`${sExpense}.recurrenceRule.monthly`)}
+                          </SelectItem>
+                          <SelectItem value="YEARLY">
+                            {t(`${sExpense}.recurrenceRule.yearly`)}
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        {t(`${sExpense}.recurrenceRule.description`)}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="notes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('notesField.label')}</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          className="text-base"
+                          maxLength={EXPENSE_NOTES_MAX}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                {runtimeFeatureFlags.enableExpenseDocuments && (
+                  <div className="sm:col-span-2 space-y-2">
+                    <FormLabel>{t('attachDocuments')}</FormLabel>
+                    <FormDescription>
+                      {t(`${sExpense}.attachDescription`)}
+                    </FormDescription>
+                    <FormField
+                      control={form.control}
+                      name="documents"
+                      render={({ field }) => (
+                        <ExpenseDocumentsInput
+                          documents={field.value ?? []}
+                          updateDocuments={field.onChange}
+                          onDocumentAttached={() =>
+                            sendEvent(
+                              { event: 'expense: attach document', props: {} },
+                              `/groups/${group.id}/expenses`,
+                            )
+                          }
+                        />
+                      )}
+                    />
+                  </div>
                 )}
-              />
-            </CardContent>
-          </Card>
-        )}
+              </CardContent>
+            </CollapsibleContent>
+          </Collapsible>
+        </Card>
 
         <div className="flex flex-col sm:flex-row mt-4 gap-2">
           <SubmitButton

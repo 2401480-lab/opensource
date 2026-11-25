@@ -34,7 +34,9 @@ export default defineConfig({
     // that fails then passes would otherwise leave no evidence behind.
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
+    // Video needs Playwright's own ffmpeg, which a system browser setup
+    // (E2E_CHROMIUM_PATH) does not have; traces and screenshots still apply.
+    video: process.env.E2E_CHROMIUM_PATH ? 'off' : 'retain-on-failure',
   },
   projects: [
     {
@@ -49,6 +51,11 @@ export default defineConfig({
         // formatting. Both must be pinned for text assertions to be stable.
         locale: 'en-US',
         timezoneId: 'UTC',
+        // Optional: run with an already installed Chrome/Chromium instead of
+        // Playwright's download (e.g. E2E_CHROMIUM_PATH=/usr/bin/chromium).
+        launchOptions: process.env.E2E_CHROMIUM_PATH
+          ? { executablePath: process.env.E2E_CHROMIUM_PATH }
+          : undefined,
       },
     },
   ],

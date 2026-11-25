@@ -1,8 +1,8 @@
 import {
   addExpense,
+  AFTER_SAVE_URL,
   createGroup,
   expectBalance,
-  EXPENSES_URL,
   openExpense,
   openTab,
   paidForRow,
@@ -41,7 +41,7 @@ test('edits an expense and recomputes balances', async ({ page }) => {
   await setChecked(paidForRow(page, 'Carol').getByRole('checkbox'), false)
 
   await page.getByRole('button', { name: 'Save', exact: true }).click()
-  await page.waitForURL(EXPENSES_URL, { timeout: 30_000 })
+  await page.waitForURL(AFTER_SAVE_URL, { timeout: 30_000 })
 
   const card = page
     .getByTestId('expense-card')
@@ -79,7 +79,7 @@ test('deletes an expense and clears the balances', async ({ page }) => {
   await expect(dialog).toContainText('Delete this expense?')
   await dialog.getByRole('button', { name: 'Yes', exact: true }).click()
 
-  await page.waitForURL(EXPENSES_URL, { timeout: 30_000 })
+  await page.waitForURL(AFTER_SAVE_URL, { timeout: 30_000 })
   await expect(page.getByTestId('expense-card')).toHaveCount(0)
   await expect(page.getByText(/doesn.t contain any expense yet/)).toBeVisible()
 
@@ -87,5 +87,7 @@ test('deletes an expense and clears the balances', async ({ page }) => {
   await expectBalance(page, 'Alice', 0)
   await expectBalance(page, 'Bob', 0)
   await expectBalance(page, 'Carol', 0)
-  await expect(page.getByText(/doesn.t need any reimbursement/)).toBeVisible()
+  await expect(
+    page.getByText(/Nobody owes anything in this group/),
+  ).toBeVisible()
 })

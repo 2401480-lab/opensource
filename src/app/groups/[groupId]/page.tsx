@@ -1,10 +1,12 @@
-import { redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
+import { GroupOverview } from './group-overview'
 
-export default async function GroupPage({
-  params,
-}: {
-  params: Promise<{ groupId: string }>
-}) {
-  const { groupId } = await params
-  redirect(`/groups/${groupId}/expenses`)
+export async function generateMetadata() {
+  const t = await getTranslations('GroupNav')
+  return { title: t('overview') }
+}
+
+/** The group's first screen: what the signed-in member has to do. */
+export default function GroupPage() {
+  return <GroupOverview />
 }

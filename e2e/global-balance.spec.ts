@@ -1,13 +1,14 @@
-import { addExpense, createGroup, setActiveUser, uniqueSuffix } from './app'
+import { addExpense, createGroup, uniqueSuffix } from './app'
 import { expect, test } from './fixtures'
 import { cardByTitle, money } from './ui'
 
 const CARD_TITLE = 'Your total balance'
 
 /**
- * The card reads `<groupId>-activeUser` for every group in the recent list,
- * which lives in localStorage -- so each test's browser context sees only the
- * groups that test visited, even though the whole suite shares one database.
+ * The card sums the signed-in user's balance over the groups they are a member
+ * of (from the server). Each test signs up its own user, so it only sees the
+ * groups it created, even though the whole suite shares one database. Alice,
+ * the first participant, is that user.
  */
 
 test('sums balances across groups once you are identified in them', async ({
@@ -35,9 +36,6 @@ test('sums balances across groups once you are identified in them', async ({
     paidBy: 'Alice',
   })
 
-  await setActiveUser(page, first, 'Alice')
-  await setActiveUser(page, second, 'Alice')
-
   await page.goto('/groups')
 
   const card = cardByTitle(page, CARD_TITLE)
@@ -49,19 +47,19 @@ test('sums balances across groups once you are identified in them', async ({
 test('reports being settled up when every balance is zero', async ({
   page,
 }) => {
-  const groupId = await createGroup(page, {
-    name: `E2E Global Settled ${uniqueSuffix()}`,
-    participants: ['Alice', 'Bob'],
-  })
-  // Alice pays and is the only participant charged, so nobody owes anybody.
-  await addExpense(page, groupId, {
-    title: 'Coffee',
-    amount: '10',
-    paidBy: 'Alice',
-    paidFor: ['Alice'],
-  })
-
-  await setActiveUser(page, groupId, 'Alice')
+  for (const name of ['E2E Global Settled A', 'E2E Global Settled B']) {
+    const groupId = await createGroup(page, {
+      name: `${name} ${uniqueSuffix()}`,
+      participants: ['Alice', 'Bob'],
+    })
+    // Alice pays and is the only participant charged, so nobody owes anybody.
+    await addExpense(page, groupId, {
+      title: 'Coffee',
+      amount: '10',
+      paidBy: 'Alice',
+      paidFor: ['Alice'],
+    })
+  }
 
   await page.goto('/groups')
 
@@ -70,11 +68,11 @@ test('reports being settled up when every balance is zero', async ({
   await expect(card).toContainText('You are all settled up across your groups.')
 })
 
-test('stays hidden until you say who you are', async ({ page }) => {
-  // A visited group with no active user: there is nobody to aggregate for, so
-  // the card must not appear at all rather than render an empty shell.
+test('stays hidden with a single group, whose card already says it all', async ({
+  page,
+}) => {
   const groupId = await createGroup(page, {
-    name: `E2E Global Anonymous ${uniqueSuffix()}`,
+    name: `E2E Global Single ${uniqueSuffix()}`,
     participants: ['Alice', 'Bob'],
   })
   await addExpense(page, groupId, {
@@ -86,8 +84,11 @@ test('stays hidden until you say who you are', async ({ page }) => {
   await page.goto('/groups')
 
   await expect(
-    page.getByRole('link', { name: /E2E Global Anonymous/ }),
+    page.getByRole('link', { name: /E2E Global Single/ }),
   ).toBeVisible()
+  await expect(page.getByTestId('group-status')).toContainText(
+    `You receive ${money(20)} from Bob`,
+  )
   await expect(
     page.getByRole('heading', { name: CARD_TITLE, exact: true }),
   ).toHaveCount(0)

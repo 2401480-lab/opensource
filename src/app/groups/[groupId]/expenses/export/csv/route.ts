@@ -1,4 +1,5 @@
 import { getCurrency } from '@/lib/currency'
+import { requireGroupMemberForRoute } from '@/lib/membership'
 import { prisma } from '@/lib/prisma'
 import { getExpenseShares } from '@/lib/shares'
 import {
@@ -46,6 +47,8 @@ export async function GET(
   { params }: { params: Promise<{ groupId: string }> },
 ) {
   const { groupId } = await params
+  const access = await requireGroupMemberForRoute(groupId)
+  if ('response' in access) return access.response
   const group = await prisma.group.findUnique({
     where: { id: groupId },
     select: {

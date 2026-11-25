@@ -14,15 +14,31 @@ export type SplitMode = 'EVENLY' | 'BY_SHARES' | 'BY_PERCENTAGE' | 'BY_AMOUNT'
 export type Recurrence = 'None' | 'Daily' | 'Weekly' | 'Monthly'
 
 export type GroupTab =
-  'Expenses' | 'Balances' | 'Information' | 'Stats' | 'Activity' | 'Settings'
+  | 'Home'
+  | 'Expenses'
+  | 'Balances'
+  | 'Information'
+  | 'Stats'
+  | 'Members'
+  | 'Activity'
+  | 'Settings'
 
-const TAB_PATHS: Record<GroupTab, string> = {
-  Expenses: 'expenses',
-  Balances: 'balances',
-  Information: 'information',
-  Stats: 'stats',
-  Activity: 'activity',
-  Settings: 'edit',
+/**
+ * Where each page is, since the navigation was reorganised: the main tasks are
+ * tabs, the rest is in the "More" menu. ("Balances" is now "Settle up".)
+ */
+const TABS: Record<
+  GroupTab,
+  { path: string; label: string; inMoreMenu: boolean }
+> = {
+  Home: { path: '', label: 'Home', inMoreMenu: false },
+  Expenses: { path: 'expenses', label: 'Expenses', inMoreMenu: false },
+  Balances: { path: 'settlements', label: 'Settle up', inMoreMenu: false },
+  Stats: { path: 'stats', label: 'Statistics', inMoreMenu: false },
+  Information: { path: 'information', label: 'Group info', inMoreMenu: true },
+  Members: { path: 'members', label: 'Participants', inMoreMenu: true },
+  Activity: { path: 'activity', label: 'Activity', inMoreMenu: true },
+  Settings: { path: 'edit', label: 'Group settings', inMoreMenu: true },
 }
 
 // Regexes, not literals: the labels are "Unevenly – By shares" with an en dash.
@@ -33,8 +49,12 @@ const SPLIT_MODE_LABELS: Record<SplitMode, RegExp> = {
   BY_AMOUNT: /By amount/,
 }
 
-/** GroupForm ships with three participant rows pre-filled (John / Jane / Jack). */
-const PREFILLED_PARTICIPANTS = 3
+/**
+ * GroupForm ships with one participant row pre-filled: the signed-in user, who
+ * becomes the group's first participant (and owner). Its name can be edited,
+ * so `participants[0]` of a test is always "me".
+ */
+const PREFILLED_PARTICIPANTS = 1
 
 /**
  * The expenses list URL.
@@ -44,6 +64,17 @@ const PREFILLED_PARTICIPANTS = 3
  * still sitting on the form and let assertions run before the write landed.
  */
 export const EXPENSES_URL = /\/groups\/[^/]+\/expenses(\?|$)/
+
+/**
+ * Where saving an expense lands: the group home (which lists the latest
+ * expenses), or the expenses list. Anchored for the same reason as above.
+ */
+export const AFTER_SAVE_URL =
+  /\/groups\/(?!create(\?|$))[^/]+(\/expenses)?(\?|$)/
+
+/** A group's home page (not /groups/create). */
+export const GROUP_HOME_URL =
+  /\/groups\/(?!create(\?|$)|import(\?|$))[^/]+(\?|$)/
 
 /** Short random suffix so group names are unique on the shared database. */
 export function uniqueSuffix(): string {
@@ -67,17 +98,6 @@ export async function createGroup(
     ).toBeVisible()
   }
 
-  // Drop surplus rows from the end, so the remaining indices never shift.
-  for (let i = PREFILLED_PARTICIPANTS - 1; i >= opts.participants.length; i--) {
-    const row = page
-      .locator('li')
-      .filter({ has: page.locator(`input[name="participants.${i}.name"]`) })
-    await row.getByRole('button').click()
-    await expect(
-      page.locator(`input[name="participants.${i}.name"]`),
-    ).toHaveCount(0)
-  }
-
   for (let i = 0; i < opts.participants.length; i++) {
     await fillStable(
       page.locator(`input[name="participants.${i}.name"]`),
@@ -86,9 +106,9 @@ export async function createGroup(
   }
 
   await page.getByRole('button', { name: 'Create', exact: true }).click()
-  await page.waitForURL(EXPENSES_URL, { timeout: 30_000 })
+  await page.waitForURL(GROUP_HOME_URL, { timeout: 30_000 })
 
-  const groupId = /\/groups\/([^/]+)\/expenses/.exec(page.url())
+  const groupId = /\/groups\/([^/?]+)/.exec(page.url())
   if (!groupId) throw new Error(`Could not read group id from ${page.url()}`)
   return groupId[1]
 }
@@ -133,6 +153,9 @@ export async function addExpense(
     // The date input spreads no RHF field, so it has no name attribute.
     await fillStable(page.locator('input[type="date"]'), expense.date)
   }
+
+  if (expense.category || expense.recurrence || expense.notes)
+    await openMoreOptions(page)
 
   if (expense.category) {
     // A cmdk Command in a Popover, not a Radix Select, but the trigger is still
@@ -194,14 +217,42 @@ export async function addExpense(
   }
 
   await submit.click()
-  await page.waitForURL(EXPENSES_URL, { timeout: 30_000 })
+  await page.waitForURL(AFTER_SAVE_URL, { timeout: 30_000 })
+}
+
+/**
+ * Unfolds "More options" on the expense form (category, currency, repeat,
+ * notes, receipts). It is closed for a new expense, and open when editing one
+ * that already uses an option.
+ */
+export async function openMoreOptions(page: Page): Promise<void> {
+  const trigger = page.getByRole('button', { name: /^More options/ })
+  if ((await trigger.getAttribute('aria-expanded')) !== 'true')
+    await trigger.click()
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true')
 }
 
 export async function openTab(page: Page, tab: GroupTab): Promise<void> {
-  const path = new RegExp(`/groups/[^/]+/${TAB_PATHS[tab]}(\\?|$)`)
+  const { path, label, inMoreMenu } = TABS[tab]
+  const url = new RegExp(
+    path ? `/groups/[^/]+/${path}(\\?|$)` : `/groups/[^/]+(\\?|$)`,
+  )
   await clickUntil(
-    () => page.getByRole('tab', { name: tab, exact: true }).click(),
-    () => page.waitForURL(path, { timeout: 5_000 }),
+    async () => {
+      if (inMoreMenu) {
+        // Labelled "More", or with the current page's name when already on
+        // one of its pages.
+        await page
+          .getByRole('button', {
+            name: /^(More|Group info|Participants|Activity|Group settings)$/,
+          })
+          .click()
+        await page.getByRole('menuitem', { name: label, exact: true }).click()
+      } else {
+        await page.getByRole('tab', { name: label, exact: true }).click()
+      }
+    },
+    () => page.waitForURL(url, { timeout: 5_000 }),
   )
 }
 
@@ -231,36 +282,32 @@ export function paidForRow(page: Page, participant: string): Locator {
   })
 }
 
-/**
- * Makes `name` the active user for this group.
- *
- * Goes through the app's own migration path rather than writing the id
- * directly: ExpenseList resolves `newGroup-activeUser` from a participant name
- * to an id on mount. Writing `<groupId>-activeUser` by hand would not survive,
- * because the shared fixture re-seeds `newGroup-activeUser` on every
- * navigation and that migration always wins.
- */
-export async function setActiveUser(
+/** The group's invite token, as a member sees it in the share popover. */
+export async function getInviteToken(
   page: Page,
   groupId: string,
-  name: string,
+): Promise<string> {
+  const input = encodeURIComponent(JSON.stringify({ json: { groupId } }))
+  const response = await page.request.get(
+    `/api/trpc/groups.invites.get?input=${input}`,
+  )
+  expect(response.ok()).toBeTruthy()
+  return (await response.json()).result.data.json.token
+}
+
+/**
+ * Joins a group through its invite link as `participant`: the existing
+ * participant of that name, picked explicitly on the join screen.
+ */
+export async function joinGroup(
+  page: Page,
+  token: string,
+  participant: string,
 ): Promise<void> {
-  await page.addInitScript((participantName) => {
-    window.localStorage.setItem('newGroup-activeUser', participantName)
-  }, name)
-
-  await page.goto(`/groups/${groupId}/expenses`)
-
-  await expect
-    .poll(
-      () =>
-        page.evaluate(
-          (id) => window.localStorage.getItem(`${id}-activeUser`) ?? '',
-          groupId,
-        ),
-      { timeout: 20_000 },
-    )
-    .not.toMatch(/^(|None)$/)
+  await page.goto(`/invite/${token}`)
+  await page.getByLabel(participant, { exact: true }).click()
+  await page.getByRole('button', { name: 'Join the group' }).click()
+  await page.waitForURL(GROUP_HOME_URL, { timeout: 30_000 })
 }
 
 /** An expense row in the list. */
@@ -281,12 +328,19 @@ export function balanceRow(page: Page, participant: string): Locator {
   )
 }
 
+/**
+ * Checks a member's result on the Settle up page, which is written out in
+ * words: "Receives $50.00", "Sends $10.00" or "Settled".
+ */
 export async function expectBalance(
   page: Page,
   participant: string,
   amount: number,
 ): Promise<void> {
-  await expect(balanceRow(page, participant)).toContainText(money(amount))
+  const label = balanceRow(page, participant).getByTestId('balance-label')
+  if (amount > 0) await expect(label).toHaveText(`Receives ${money(amount)}`)
+  else if (amount < 0) await expect(label).toHaveText(`Sends ${money(-amount)}`)
+  else await expect(label).toHaveText('Settled')
 }
 
 export function reimbursementRow(

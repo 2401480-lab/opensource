@@ -39,12 +39,11 @@ export function CreateExpenseForm({
       group={group}
       categories={categories}
       expenseId={expenseId}
-      onSubmit={async (expenseFormValues, participantId) => {
+      onSubmit={async (expenseFormValues) => {
         try {
           await createExpenseMutateAsync({
             groupId,
             expenseFormValues,
-            participantId,
             expenseId,
           })
         } catch (error) {
@@ -56,7 +55,7 @@ export function CreateExpenseForm({
         }
         utils.groups.expenses.invalidate()
         utils.groups.stats.invalidate()
-        router.push(`/groups/${group.id}`)
+        router.push(`/groups/${group.id}/expenses`)
       }}
       runtimeFeatureFlags={runtimeFeatureFlags}
     />

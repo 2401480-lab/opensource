@@ -41,26 +41,24 @@ export function EditExpenseForm({
       group={group}
       expense={expense}
       categories={categories}
-      onSubmit={async (expenseFormValues, participantId) => {
+      onSubmit={async (expenseFormValues) => {
         await updateExpenseMutateAsync({
           expenseId,
           groupId,
           expenseFormValues,
-          participantId,
         })
         utils.groups.expenses.invalidate()
         utils.groups.stats.invalidate()
-        router.push(`/groups/${group.id}`)
+        router.push(`/groups/${group.id}/expenses`)
       }}
-      onDelete={async (participantId) => {
+      onDelete={async () => {
         await deleteExpenseMutateAsync({
           expenseId,
           groupId,
-          participantId,
         })
         utils.groups.expenses.invalidate()
         utils.groups.stats.invalidate()
-        router.push(`/groups/${group.id}`)
+        router.push(`/groups/${group.id}/expenses`)
       }}
       runtimeFeatureFlags={runtimeFeatureFlags}
     />

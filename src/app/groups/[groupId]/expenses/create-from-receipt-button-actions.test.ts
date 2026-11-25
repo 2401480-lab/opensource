@@ -19,6 +19,11 @@ jest.mock('../../../../lib/env', () => ({
     OPENAI_MODEL_RECEIPT_EXTRACT: 'test-vision-model',
   },
 }))
+// `var` so the factory below can reach it (jest.mock is hoisted).
+var mockCurrentUser: { id: string } | null = { id: 'user-1' }
+jest.mock('../../../../lib/auth', () => ({
+  getCurrentUser: async () => mockCurrentUser,
+}))
 jest.mock('../../../../lib/featureFlags', () => ({
   getRuntimeFeatureFlags: async () => ({ enableReceiptExtract: true }),
 }))
@@ -46,7 +51,18 @@ const NOTHING_EXTRACTED = {
 }
 
 describe('extractExpenseInformationFromImage', () => {
-  beforeEach(() => mockCreate.mockReset())
+  beforeEach(() => {
+    mockCreate.mockReset()
+    mockCurrentUser = { id: 'user-1' }
+  })
+
+  it('refuses callers who are not signed in, without calling the model', async () => {
+    mockCurrentUser = null
+    await expect(
+      extractExpenseInformationFromImage('https://bucket.example/receipt.jpg'),
+    ).rejects.toThrow('Unauthorized')
+    expect(mockCreate).not.toHaveBeenCalled()
+  })
 
   it('returns every field the model read off the receipt', async () => {
     respondWith(

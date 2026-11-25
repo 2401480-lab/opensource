@@ -1,5 +1,6 @@
 import {
   addExpense,
+  AFTER_SAVE_URL,
   createGroup,
   expectBalance,
   expenseCard,
@@ -36,7 +37,7 @@ test('records a negative amount as an income', async ({ page }) => {
   await page.getByTestId('paid-by').click()
   await page.getByRole('option', { name: 'Alice' }).click()
   await page.getByRole('button', { name: 'Create', exact: true }).click()
-  await page.waitForURL(/\/groups\/[^/]+\/expenses(\?|$)/, { timeout: 30_000 })
+  await page.waitForURL(AFTER_SAVE_URL, { timeout: 30_000 })
 
   await expect(expenseCard(page, 'Deposit refund')).toContainText(money(-90))
   await expect(expenseCard(page, 'Deposit refund')).toContainText(

@@ -22,6 +22,8 @@ model Group {
   participants Participant[]
   expenses     Expense[]
   activities   Activity[]
+  invites      GroupInvite[]
+  settlements  Settlement[]
   createdAt    DateTime      @default(now())
   deleteAt     DateTime?
 }
@@ -33,6 +35,38 @@ model Participant {
   groupId         String
   expensesPaidBy  Expense[]
   expensesPaidFor ExpensePaidFor[]
+  settlementsSent     Settlement[] @relation("SettlementFrom")
+  settlementsReceived Settlement[] @relation("SettlementTo")
+
+  // The account this participant belongs to. Null for participants nobody has
+  // claimed yet, which includes every participant created before accounts
+  // existed: they are never linked automatically (e.g. by name), only when a
+  // signed-in user explicitly picks them.
+  user            User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId          String?
+  role            GroupRole        @default(MEMBER)
+
+  // One account is at most one participant of a given group.
+  @@unique([groupId, userId])
+  @@index([userId])
+}
+
+enum GroupRole {
+  OWNER
+  MEMBER
+}
+
+// A link that lets a signed-in user join a group. The id is the secret token.
+model GroupInvite {
+  id              String    @id
+  group           Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId         String
+  createdBy       User      @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
+  createdByUserId String
+  createdAt       DateTime  @default(now())
+  revokedAt       DateTime?
+
+  @@index([groupId])
 }
 
 model Category {
@@ -66,6 +100,9 @@ model Expense {
   recurrenceRule         RecurrenceRule?       @default(NONE)
   recurringExpenseLink   RecurringExpenseLink?
   recurringExpenseLinkId String?
+
+  // Set on the transfer record created when a settlement is confirmed.
+  settlement             Settlement?
 }
 
 model ExpenseDocument {
@@ -131,6 +168,10 @@ model Activity {
   participantId String?
   expenseId     String?
   data          String?
+  // The signed-in account that performed the action (null for activities
+  // recorded before accounts existed).
+  actorUserId   String?
+  settlementId  String?
 }
 
 enum ActivityType {
@@ -140,4 +181,122 @@ enum ActivityType {
   DELETE_EXPENSE
   SCHEDULE_GROUP_DELETION
   RESTORE_GROUP
+  JOIN_GROUP
+  REQUEST_SETTLEMENT
+  CONFIRM_SETTLEMENT
+  REJECT_SETTLEMENT
+  CANCEL_SETTLEMENT
+}
+
+// ── Authentication (tables used by better-auth, see src/lib/auth.ts) ──
+
+model User {
+  id            String        @id
+  name          String
+  email         String        @unique
+  emailVerified Boolean       @default(false)
+  image         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+  participants  Participant[]
+  invites       GroupInvite[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  // Password hash for email/password accounts (never the plain password).
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+// ── Settling up: a transfer one member says they sent, then the recipient
+// confirms (or rejects). Only a confirmed settlement affects balances: it then
+// gets a transfer record (Expense with isReimbursement = true), so balance and
+// statistics code keeps working unchanged. ──
+
+enum SettlementStatus {
+  PENDING   // sender recorded the transfer, waiting for the recipient
+  CONFIRMED // recipient confirmed they received it
+  REJECTED  // recipient says they did not receive it
+  CANCELED  // sender withdrew the request
+}
+
+model Settlement {
+  id                String           @id
+  group             Group            @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId           String
+  from              Participant      @relation("SettlementFrom", fields: [fromParticipantId], references: [id], onDelete: Cascade)
+  fromParticipantId String
+  to                Participant      @relation("SettlementTo", fields: [toParticipantId], references: [id], onDelete: Cascade)
+  toParticipantId   String
+  // In the group currency, minor units.
+  amount            Int
+  paidAt            DateTime         @db.Date
+  note              String?
+  status            SettlementStatus @default(PENDING)
+  requestedByUserId String
+  respondedByUserId String?
+  respondedAt       DateTime?
+  rejectReason      String?
+  expense           Expense?         @relation(fields: [expenseId], references: [id], onDelete: SetNull)
+  expenseId         String?          @unique
+  documents         SettlementDocument[]
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([groupId, status])
+}
+
+model SettlementDocument {
+  id           String     @id
+  url          String
+  width        Int
+  height       Int
+  settlement   Settlement @relation(fields: [settlementId], references: [id], onDelete: Cascade)
+  settlementId String
 }

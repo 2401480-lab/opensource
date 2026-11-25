@@ -1,15 +1,27 @@
 'use client'
 
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { cn } from '@/lib/utils'
 import {
   Activity,
   BarChart3,
+  ChevronDown,
+  Home,
   Info,
   Receipt,
   Scale,
   Settings,
+  Users,
 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
+import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { ComponentType } from 'react'
 
@@ -17,44 +29,83 @@ type Props = {
   groupId: string
 }
 
-export function GroupTabs({ groupId }: Props) {
-  const t = useTranslations()
-  const pathname = usePathname()
-  const value =
-    pathname.replace(/\/groups\/[^\/]+\/([^/]+).*/, '$1') || 'expenses'
-  const router = useRouter()
+type Item = { value: string; label: string; Icon: ComponentType<any> }
 
-  const tabs: { value: string; label: string; Icon: ComponentType<any> }[] = [
-    { value: 'expenses', label: t('Expenses.title'), Icon: Receipt },
-    { value: 'balances', label: t('Balances.title'), Icon: Scale },
-    { value: 'information', label: t('Information.title'), Icon: Info },
-    { value: 'stats', label: t('Stats.title'), Icon: BarChart3 },
-    { value: 'activity', label: t('Activity.title'), Icon: Activity },
-    { value: 'edit', label: t('Settings.title'), Icon: Settings },
+/**
+ * The group's navigation, by importance: the main tasks as tabs (home,
+ * expenses, settlements, statistics), everything else under "More".
+ * Every page that existed before is still reachable.
+ */
+export function GroupTabs({ groupId }: Props) {
+  const t = useTranslations('GroupNav')
+  const pathname = usePathname()
+  const router = useRouter()
+  const section =
+    pathname.replace(/^\/groups\/[^/]+\/?([^/]*).*/, '$1') || 'overview'
+
+  const primary: Item[] = [
+    { value: 'overview', label: t('overview'), Icon: Home },
+    { value: 'expenses', label: t('expenses'), Icon: Receipt },
+    { value: 'settlements', label: t('settlements'), Icon: Scale },
+    { value: 'stats', label: t('stats'), Icon: BarChart3 },
   ]
+  const secondary: Item[] = [
+    { value: 'information', label: t('information'), Icon: Info },
+    { value: 'members', label: t('members'), Icon: Users },
+    { value: 'activity', label: t('activity'), Icon: Activity },
+    { value: 'edit', label: t('settings'), Icon: Settings },
+  ]
+  const href = (value: string) =>
+    value === 'overview' ? `/groups/${groupId}` : `/groups/${groupId}/${value}`
+  const inSecondary = secondary.some((item) => item.value === section)
 
   return (
-    <Tabs
-      value={value}
-      className="[&>*]:border flex-1 min-w-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      onValueChange={(value) => {
-        router.push(`/groups/${groupId}/${value}`)
-      }}
-    >
-      <TabsList>
-        {tabs.map(({ value, label, Icon }) => (
-          <TabsTrigger
-            key={value}
-            value={value}
-            title={label}
-            aria-label={label}
-            className="gap-2"
+    <div className="flex gap-2 flex-1 min-w-0">
+      <Tabs
+        value={inSecondary ? '' : section}
+        className="[&>*]:border min-w-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        onValueChange={(value) => router.push(href(value))}
+      >
+        <TabsList>
+          {primary.map(({ value, label, Icon }) => (
+            <TabsTrigger
+              key={value}
+              value={value}
+              title={label}
+              className="gap-1.5 px-2.5 sm:px-3"
+            >
+              <Icon className="w-4 h-4 hidden sm:block" />
+              <span>{label}</span>
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="outline"
+            className={cn(
+              'flex-shrink-0 gap-1 px-2.5',
+              inSecondary && 'bg-accent',
+            )}
           >
-            <Icon className="w-4 h-4" />
-            <span className="hidden sm:inline">{label}</span>
-          </TabsTrigger>
-        ))}
-      </TabsList>
-    </Tabs>
+            {inSecondary
+              ? secondary.find((item) => item.value === section)?.label
+              : t('more')}
+            <ChevronDown className="w-4 h-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {secondary.map(({ value, label, Icon }) => (
+            <DropdownMenuItem key={value} asChild>
+              <Link href={href(value)} className="gap-2">
+                <Icon className="w-4 h-4" />
+                {label}
+              </Link>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   )
 }

@@ -110,6 +110,12 @@ function CategoryCommand({
     {},
   )
 
+  // Extra words a category can be found with, e.g. "식사" for Dining Out.
+  const searchKeywords = (category: Category) => {
+    const key = `keywords.${category.name}`
+    return t.has(key) ? t(key) : ''
+  }
+
   return (
     <Command>
       <CommandInput placeholder={t('search')} className="text-base" />
@@ -123,7 +129,9 @@ function CategoryCommand({
                   key={category.id}
                   value={`${category.id} ${t(
                     `${category.grouping}.heading`,
-                  )} ${t(`${category.grouping}.${category.name}`)}`}
+                  )} ${t(`${category.grouping}.${category.name}`)} ${searchKeywords(
+                    category,
+                  )}`}
                   onSelect={(currentValue) => {
                     const id = Number(currentValue.split(' ')[0])
                     onValueChange(id)

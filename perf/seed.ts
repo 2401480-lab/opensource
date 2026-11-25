@@ -24,6 +24,7 @@
  *    Every expense is `NONE` with no `RecurringExpenseLink`, so that pass finds
  *    nothing to do and stays a single constant-cost query.
  */
+import { hashPassword } from 'better-auth/crypto'
 import { Client } from 'pg'
 import {
   config,
@@ -33,6 +34,7 @@ import {
   paidForCountFor,
   participantCountFor,
   participantId,
+  PERF_USER,
   SEARCH_TOKEN,
   seedDatabaseUrl,
 } from './config'
@@ -153,9 +155,51 @@ async function main() {
     await client.query(`
       TRUNCATE TABLE
         "ExpensePaidFor", "ExpenseDocument", "RecurringExpenseLink",
-        "Activity", "Expense", "Participant", "Group"
+        "Activity", "Expense", "Participant", "Group", "user"
       RESTART IDENTITY CASCADE
     `)
+
+    // The account the benchmark signs in as (see PERF_USER). The password is
+    // hashed the way the app hashes it, so a normal sign-in works.
+    await insertRows(
+      client,
+      'user',
+      ['id', 'name', 'email', 'emailVerified', 'createdAt', 'updatedAt'],
+      [
+        [
+          PERF_USER.id,
+          PERF_USER.name,
+          PERF_USER.email,
+          true,
+          toTimestamp(EPOCH),
+          toTimestamp(EPOCH),
+        ],
+      ],
+    )
+    await insertRows(
+      client,
+      'account',
+      [
+        'id',
+        'accountId',
+        'providerId',
+        'userId',
+        'password',
+        'createdAt',
+        'updatedAt',
+      ],
+      [
+        [
+          `${PERF_USER.id}-credential`,
+          PERF_USER.id,
+          'credential',
+          PERF_USER.id,
+          await hashPassword(PERF_USER.password),
+          toTimestamp(EPOCH),
+          toTimestamp(EPOCH),
+        ],
+      ],
+    )
 
     const { rows: categories } = await client.query<{ id: number }>(
       'SELECT id FROM "Category" ORDER BY id ASC',
@@ -193,12 +237,16 @@ async function main() {
       await insertRows(
         client,
         'Participant',
-        ['id', 'name', 'groupId'],
+        ['id', 'name', 'groupId', 'userId', 'role'],
         Array.from({ length: participants }, (_, p) => [
           participantId(g, p),
           `${NAMES[p % NAMES.length]} ${p}`,
           groupId(g),
+          // Participant 0 is the signed-in benchmark user, owner of the group.
+          p === 0 ? PERF_USER.id : null,
+          p === 0 ? 'OWNER' : 'MEMBER',
         ]),
+        { 4: '"GroupRole"' },
       )
 
       const expenseRows = Array.from({ length: expenses }, (_, i) => {

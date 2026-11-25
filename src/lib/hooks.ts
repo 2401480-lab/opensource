@@ -1,3 +1,4 @@
+import { trpc } from '@/trpc/client'
 import { useEffect, useState } from 'react'
 import useSWR, { Fetcher } from 'swr'
 
@@ -51,19 +52,16 @@ export function useBaseUrl() {
 }
 
 /**
- * @returns The active user, or `null` until it is fetched from local storage
+ * @returns The participant id of the signed-in user in the group, or `null`
+ * until it is loaded. Resolved on the server from the session (it used to be
+ * picked per device and kept in local storage).
  */
 export function useActiveUser(groupId?: string) {
-  const [activeUser, setActiveUser] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (groupId) {
-      const activeUser = localStorage.getItem(`${groupId}-activeUser`)
-      if (activeUser) setActiveUser(activeUser)
-    }
-  }, [groupId])
-
-  return activeUser
+  const { data } = trpc.groups.get.useQuery(
+    { groupId: groupId ?? '' },
+    { enabled: !!groupId },
+  )
+  return data?.me.participantId ?? null
 }
 
 // One entry per quoted currency. The v2 API sends back the requested date when

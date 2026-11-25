@@ -51,6 +51,16 @@ const nextConfig = {
       })(),
     },
   },
+  async redirects() {
+    return [
+      // "Balances" became "Settle up"; keep old links and bookmarks working.
+      {
+        source: '/groups/:groupId/balances',
+        destination: '/groups/:groupId/settlements',
+        permanent: false,
+      },
+    ]
+  },
   async headers() {
     return [
       {

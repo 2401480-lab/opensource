@@ -1,4 +1,3 @@
-import { saveRecentGroup } from '@/app/groups/recent-groups-helpers'
 import { QrCodeScanner } from '@/components/qr-code-scanner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,16 +7,13 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { useMediaQuery } from '@/lib/hooks'
-import { trpc } from '@/trpc/client'
 import { Link as LinkIcon, Loader2, Plus, QrCode } from 'lucide-react'
 import { useTranslations } from 'next-intl'
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
-type Props = {
-  reload: () => void
-}
-
-export function AddGroupByUrlButton({ reload }: Props) {
+/** Opens an invite link (or a group link) pasted or scanned by the user. */
+export function AddGroupByUrlButton() {
   const t = useTranslations('Groups.AddByURL')
   const isDesktop = useMediaQuery('(min-width: 640px)')
   const [url, setUrl] = useState('')
@@ -26,54 +22,40 @@ export function AddGroupByUrlButton({ reload }: Props) {
   const [open, setOpen] = useState(false)
   const [pending, setPending] = useState(false)
   const [scanMode, setScanMode] = useState(false)
-  const utils = trpc.useUtils()
+  const router = useRouter()
 
   const processUrl = async (urlToProcess: string) => {
     // Parse with the URL API rather than building a RegExp from
     // window.location.origin, which is a regex-injection sink. Resolving
     // against the current origin also lets a scanned QR carry a relative
-    // /groups/<id> link, while an absolute link keeps its own origin and so
-    // still fails the same-origin check below.
-    let groupId: string | undefined
+    // link, while an absolute link keeps its own origin and so still fails the
+    // same-origin check below.
+    let path: string | undefined
     try {
-      const parsed = new URL(urlToProcess, window.location.origin)
+      const parsed = new URL(urlToProcess.trim(), window.location.origin)
       if (parsed.origin === window.location.origin) {
-        groupId = parsed.pathname.match(/^\/groups\/([^/]+)/)?.[1]
+        const invite = parsed.pathname.match(/^\/invite\/([^/]+)/)?.[1]
+        const group = parsed.pathname.match(/^\/groups\/([^/]+)/)?.[1]
+        // Group links still work for groups created before accounts: the
+        // group page then asks who you are, or for an invite link.
+        if (invite) path = `/invite/${invite}`
+        else if (group && group !== 'create' && group !== 'import')
+          path = `/groups/${group}`
       }
     } catch {
       // Unparseable input is treated as "not found" below.
     }
 
-    if (!groupId) {
+    if (!path) {
       setError(true)
       setScanError('')
-      setPending(false)
       return
     }
 
     setPending(true)
-    try {
-      const { group } = await utils.groups.get.fetch({
-        groupId: groupId,
-      })
-      if (group) {
-        saveRecentGroup({ id: group.id, name: group.name })
-        reload()
-        setUrl('')
-        setOpen(false)
-        setScanMode(false)
-        setError(false)
-        setScanError('')
-      } else {
-        setError(true)
-        setScanError('')
-      }
-    } catch (err) {
-      setError(true)
-      setScanError('')
-    } finally {
-      setPending(false)
-    }
+    setOpen(false)
+    setScanMode(false)
+    router.push(path)
   }
 
   return (

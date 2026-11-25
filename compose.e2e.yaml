@@ -23,6 +23,13 @@ services:
       POSTGRES_PRISMA_URL: postgresql://postgres:e2e@db:5432/spliit_e2e
       POSTGRES_URL_NON_POOLING: postgresql://postgres:e2e@db:5432/spliit_e2e
       NEXT_TELEMETRY_DISABLED: '1'
+      # Throwaway values for the ephemeral test stack only.
+      BETTER_AUTH_SECRET: e2e-only-secret-not-for-production-0123456789
+      BASE_URL: http://localhost:${E2E_HOST_PORT:-3000}
+      # The suite's amounts are written in dollars.
+      DEFAULT_CURRENCY_CODE: USD
+      # The suite signs up a user per test: lift the login rate limit.
+      AUTH_RATE_LIMIT_DISABLED: 'true'
     restart: 'no'
     depends_on:
       db:

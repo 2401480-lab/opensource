@@ -1,6 +1,7 @@
 'use server'
 
 import { getCategories } from '@/lib/api'
+import { getCurrentUser } from '@/lib/auth'
 import { env } from '@/lib/env'
 import { getRuntimeFeatureFlags } from '@/lib/featureFlags'
 import { getOpenAIClient } from '@/lib/openai'
@@ -20,6 +21,10 @@ const receiptResponseSchema = z.object({
 
 export async function extractExpenseInformationFromImage(imageUrl: string) {
   'use server'
+
+  // Server actions are public endpoints: only signed-in users may spend the
+  // instance's OpenAI quota.
+  if (!(await getCurrentUser())) throw new Error('Unauthorized')
 
   // Enforce the feature flag server-side: the UI gate only hides the button, it
   // does not prevent the action endpoint from being invoked directly.

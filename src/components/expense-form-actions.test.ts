@@ -19,6 +19,11 @@ jest.mock('../lib/env', () => ({
     OPENAI_MODEL_CATEGORY_EXTRACT: 'test-model',
   },
 }))
+// `var` so the factory below can reach it (jest.mock is hoisted).
+var mockCurrentUser: { id: string } | null = { id: 'user-1' }
+jest.mock('../lib/auth', () => ({
+  getCurrentUser: async () => mockCurrentUser,
+}))
 jest.mock('../lib/featureFlags', () => ({
   getRuntimeFeatureFlags: async () => ({ enableCategoryExtract: true }),
 }))
@@ -34,7 +39,18 @@ function respondWith(content: string | null) {
 }
 
 describe('extractCategoryFromTitle', () => {
-  beforeEach(() => mockCreate.mockReset())
+  beforeEach(() => {
+    mockCreate.mockReset()
+    mockCurrentUser = { id: 'user-1' }
+  })
+
+  it('refuses callers who are not signed in, without calling the model', async () => {
+    mockCurrentUser = null
+    await expect(extractCategoryFromTitle('Taxi')).rejects.toThrow(
+      'Unauthorized',
+    )
+    expect(mockCreate).not.toHaveBeenCalled()
+  })
 
   it('returns the category the model picked', async () => {
     respondWith(JSON.stringify({ categoryId: 4 }))

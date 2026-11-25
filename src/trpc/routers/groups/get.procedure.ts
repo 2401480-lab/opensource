@@ -1,10 +1,26 @@
 import { getGroup } from '@/lib/api'
-import { baseProcedure } from '@/trpc/init'
-import { z } from 'zod'
+import { groupProcedure } from '@/trpc/init'
 
-export const getGroupProcedure = baseProcedure
-  .input(z.object({ groupId: z.string().min(1) }))
-  .query(async ({ input: { groupId } }) => {
+/** Adds whether each participant is linked to an account (i.e. is a member). */
+export function publicParticipants<T extends { userId: string | null }>(
+  participants: T[],
+) {
+  return participants.map((participant) => ({
+    ...participant,
+    isLinked: participant.userId !== null,
+  }))
+}
+
+export const getGroupProcedure = groupProcedure.query(
+  async ({ ctx, input: { groupId } }) => {
     const group = await getGroup(groupId)
-    return { group }
-  })
+    return {
+      group: group && {
+        ...group,
+        participants: publicParticipants(group.participants),
+      },
+      /** The signed-in user's participant in this group. */
+      me: ctx.membership,
+    }
+  },
+)

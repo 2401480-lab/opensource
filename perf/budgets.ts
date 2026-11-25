@@ -57,28 +57,48 @@ const EXPENSE_READ_QUERIES = 2
 /** `getGroup` is a single findUnique with an include. */
 const GROUP_READ_QUERIES = 1
 
+/**
+ * Every request is authenticated: better-auth reads the session and its user
+ * (src/lib/auth.ts `getCurrentUser`, once per HTTP request, shared by every
+ * procedure of a batch).
+ */
+const AUTH_QUERIES = 2
+
+/**
+ * Every group-scoped procedure checks that the user is a member of the group
+ * (`groupProcedure` in src/trpc/init.ts): one lookup per procedure.
+ */
+const MEMBERSHIP_QUERY = 1
+
 const largeGroupParticipants = participantCountFor(LARGE_GROUP)
 
 export const budgets: Record<string, Budget> = {
   /**
-   * `groups.list` is one query for all N groups. `groups.balances.forUser` then
-   * runs `getGroup` + a full unpaged `getGroupExpenses` per group -- hence the
-   * `* config.groups`. Bringing that to a constant is the single biggest win
-   * available on this screen: at the default dataset it is 61 queries and by
-   * far the slowest step in the suite.
+   * `groups.list` returns the signed-in user's groups with their own balance
+   * in each, from one nested query (src/lib/membership.ts `listMyGroups`),
+   * so the cost no longer grows with the number of groups. (Before accounts,
+   * the home screen sent its local list of group ids and then ran
+   * `getGroup` + a full `getGroupExpenses` per group: 61 queries at the
+   * default dataset.)
    */
   'list-groups:home': {
     requests: 1,
     bytes: 120 + config.groups * 360,
-    rows: config.groups * 2,
-    dbQueries: 1 + config.groups * (GROUP_READ_QUERIES + EXPENSE_READ_QUERIES),
+    // One row per group: its own settlement status is part of the row.
+    rows: config.groups,
+    dbQueries: AUTH_QUERIES + 1,
   },
 
   'view-group:first-page': {
     requests: 1,
     bytes: 1_500 + config.pageSize * 1_340,
     rows: largeGroupParticipants + config.pageSize,
-    dbQueries: GROUP_READ_QUERIES + EXPENSE_READ_QUERIES,
+    // groups.get + groups.expenses.list, batched.
+    dbQueries:
+      AUTH_QUERIES +
+      2 * MEMBERSHIP_QUERY +
+      GROUP_READ_QUERIES +
+      EXPENSE_READ_QUERIES,
   },
 
   /**
@@ -91,7 +111,7 @@ export const budgets: Record<string, Budget> = {
     requests: 1,
     bytes: config.pageSize * 1_340,
     rows: config.pageSize,
-    dbQueries: EXPENSE_READ_QUERIES,
+    dbQueries: AUTH_QUERIES + MEMBERSHIP_QUERY + EXPENSE_READ_QUERIES,
   },
 
   'view-group:search': {
@@ -99,7 +119,7 @@ export const budgets: Record<string, Budget> = {
     bytes: config.pageSize * 1_340,
     // A full page, unless the dataset is small enough that fewer expenses match.
     rows: Math.min(config.pageSize, searchMatchCount),
-    dbQueries: EXPENSE_READ_QUERIES,
+    dbQueries: AUTH_QUERIES + MEMBERSHIP_QUERY + EXPENSE_READ_QUERIES,
   },
 
   /**
@@ -115,8 +135,10 @@ export const budgets: Record<string, Budget> = {
    */
   'view-group:balances': {
     requests: 1,
-    bytes: largeGroupParticipants * 140,
-    dbQueries: EXPENSE_READ_QUERIES,
+    // Each participant also gets a breakdown (paid, share, sent, received),
+    // which the settle-up page uses to explain how their amount comes about.
+    bytes: largeGroupParticipants * 220,
+    dbQueries: AUTH_QUERIES + MEMBERSHIP_QUERY + EXPENSE_READ_QUERIES,
   },
 
   /**
@@ -127,12 +149,15 @@ export const budgets: Record<string, Budget> = {
    */
   'view-expense:edit-form': {
     requests: 1,
+    // Participants now carry whether they are members, and the response says
+    // which one is the signed-in user.
     bytes:
-      4_600 +
-      largeGroupParticipants * 60 +
+      4_800 +
+      largeGroupParticipants * 90 +
       paidForCountFor(LARGE_GROUP, targetExpenseIndex) * 40,
     rows:
       largeGroupParticipants + paidForCountFor(LARGE_GROUP, targetExpenseIndex),
-    dbQueries: GROUP_READ_QUERIES + 1 + 1,
+    // categories.list needs a session but no group membership.
+    dbQueries: AUTH_QUERIES + 2 * MEMBERSHIP_QUERY + GROUP_READ_QUERIES + 1 + 1,
   },
 }

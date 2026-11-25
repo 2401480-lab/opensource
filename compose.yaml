@@ -3,7 +3,7 @@ services:
     build: .
     image: spliit:latest
     ports:
-      - 3000:3000
+      - 3003:3000
     env_file:
       - container.env
     depends_on:

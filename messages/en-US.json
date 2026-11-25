@@ -54,7 +54,8 @@
     "everyone": "everyone",
     "receivedBy": "Received by <strong>{paidBy}</strong> for <paidFor></paidFor>",
     "yourBalance": "Your balance:",
-    "notInvolved": "You are not involved"
+    "notInvolved": "Not part of my share",
+    "yourShare": "My share:"
   },
   "Groups": {
     "myGroups": "My groups",
@@ -90,10 +91,10 @@
       "undo": "Undo"
     },
     "AddByURL": {
-      "button": "Add by URL",
-      "title": "Add a group by URL",
-      "description": "If a group was shared with you, you can paste its URL here to add it to your list.",
-      "error": "Oops, we are not able to find the group from the URL you provided…",
+      "button": "Join with a link",
+      "title": "Join a group with a link",
+      "description": "Paste the invite link a member sent you, or scan its QR code.",
+      "error": "This link was not recognized. Paste the whole invite link.",
       "urlMode": "Enter URL",
       "qrMode": "Scan QR",
       "scanner": {
@@ -107,7 +108,7 @@
     },
     "NotFound": {
       "text": "This group does not exist.",
-      "link": "Go to recently visited groups"
+      "link": "Back to my groups"
     }
   },
   "GroupForm": {
@@ -135,12 +136,14 @@
     "Participants": {
       "title": "Participants",
       "description": "Enter the name for each participant.",
-      "protectedParticipant": "This participant is part of expenses, and can not be removed.",
+      "protectedParticipant": "This participant is part of expenses or is a member with an account, and cannot be removed.",
       "new": "New",
       "add": "Add participant",
       "John": "John",
       "Jane": "Jane",
-      "Jack": "Jack"
+      "Jack": "Jack",
+      "you": "You",
+      "member": "Member"
     },
     "Settings": {
       "title": "Local settings",
@@ -308,7 +311,16 @@
     "save": "Save",
     "saving": "Saving…",
     "cancel": "Cancel",
-    "reimbursement": "Reimbursement"
+    "reimbursement": "Reimbursement",
+    "repayment": {
+      "title": "Record a transfer",
+      "description": "Money sent from one member to another to settle up. It is not an expense, and is not counted in statistics."
+    },
+    "moreOptions": {
+      "title": "More options",
+      "hint": "Category, currency, repeat, notes",
+      "hintWithDocuments": "Category, currency, repeat, notes, receipts"
+    }
   },
   "ExpenseDocumentsInput": {
     "TooBigToast": {
@@ -463,7 +475,12 @@
       "older": "Older"
     },
     "groupDeletionScheduled": "Group scheduled for deletion by <strong>{participant}</strong>.",
-    "groupRestored": "Group restored by <strong>{participant}</strong>."
+    "groupRestored": "Group restored by <strong>{participant}</strong>.",
+    "groupJoined": "<strong>{participant}</strong> joined the group.",
+    "settlementRequested": "<strong>{participant}</strong> asked {to} to confirm a transfer of {amount}.",
+    "settlementConfirmed": "<strong>{participant}</strong> confirmed receiving {amount} from {from}.",
+    "settlementRejected": "<strong>{participant}</strong> said they did not receive {amount} from {from}.",
+    "settlementCanceled": "<strong>{participant}</strong> canceled their transfer of {amount} to {to}."
   },
   "Information": {
     "title": "Information",
@@ -593,5 +610,267 @@
     "updateTitle": "Update available",
     "updateDescription": "A new version of Spliit is available.",
     "reload": "Reload"
+  },
+  "Auth": {
+    "tagline": "Record what you spend together, and see who should send how much to whom.",
+    "howItWorks": "How it works",
+    "step1": "Create a group and invite your friends with a link.",
+    "step2": "Record each shared expense: who paid and who it was for.",
+    "step3": "See what you owe or are owed, and record your transfers.",
+    "email": "Email",
+    "password": "Password",
+    "passwordConfirm": "Confirm password",
+    "passwordHint": "At least 8 characters.",
+    "name": "Name",
+    "nameHint": "How others will see you in groups.",
+    "login": "Log in",
+    "loggingIn": "Logging in…",
+    "signup": "Create account",
+    "signingUp": "Creating account…",
+    "noAccount": "No account yet?",
+    "goSignup": "Sign up",
+    "haveAccount": "Already have an account?",
+    "goLogin": "Log in",
+    "loginTitle": "Log in",
+    "signupTitle": "Create your account",
+    "errors": {
+      "invalidCredentials": "The email or password is incorrect.",
+      "emailTaken": "An account already exists with this email.",
+      "passwordMismatch": "The passwords do not match.",
+      "passwordTooShort": "The password must be at least 8 characters.",
+      "invalidEmail": "Enter a valid email address.",
+      "nameRequired": "Enter a name of at least 2 characters.",
+      "generic": "Something went wrong. Please try again."
+    }
+  },
+  "UserMenu": {
+    "account": "My account",
+    "logout": "Log out",
+    "myGroups": "My groups"
+  },
+  "Account": {
+    "title": "My account",
+    "description": "Your login information.",
+    "name": "Name",
+    "email": "Email",
+    "save": "Save",
+    "saved": "Saved.",
+    "logout": "Log out",
+    "nameNote": "Changing your name here does not rename you in existing groups."
+  },
+  "MyGroups": {
+    "title": "My groups",
+    "create": "Create a group",
+    "join": "Join with a link",
+    "empty": {
+      "title": "You are not in any group yet",
+      "description": "Create a group for a trip, a dinner or a shared purchase, or join one with the invite link a friend sent you."
+    },
+    "status": {
+      "toSend": "You send {amount} to {name}",
+      "toReceive": "You receive {amount} from {name}",
+      "settled": "Nothing to settle",
+      "more": "and {count} more"
+    },
+    "owner": "Owner",
+    "members": "{count} participants",
+    "import": {
+      "banner": "{count, plural, one {# group you opened on this device is} other {# groups you opened on this device are}} not linked to your account yet.",
+      "action": "Link them",
+      "title": "Link groups from this device",
+      "description": "These are the groups this browser remembers from before accounts existed. Open a group to tell which participant you are.",
+      "statusMember": "Already in your groups",
+      "statusUnclaimed": "Ready to link",
+      "statusForbidden": "Needs an invite link from a member",
+      "statusNotFound": "No longer exists",
+      "open": "Open",
+      "none": "There is nothing to link on this device.",
+      "forget": "Forget the list on this device"
+    },
+    "loadError": "Your groups could not be loaded.",
+    "retry": "Retry",
+    "star": "Add to favorites",
+    "unstar": "Remove from favorites"
+  },
+  "Join": {
+    "title": "Join {name}",
+    "alreadyMember": "You are already a member of this group.",
+    "open": "Open the group",
+    "whoAreYou": "Who are you in this group?",
+    "whoAreYouHelp": "Pick your name if someone already added you, so the expenses already recorded for you stay yours.",
+    "newParticipant": "I am not in the list: join as a new participant",
+    "newName": "Your name in this group",
+    "submit": "Join the group",
+    "joining": "Joining…",
+    "invalid": "This invite link is invalid or has been replaced by a new one. Ask a member for the current link.",
+    "claimTitle": "Link {name} to your account",
+    "claimHelp": "This group was created before accounts existed. Pick who you are: you will become its owner, and other members will then join with an invite link.",
+    "claimSubmit": "Link to my account",
+    "forbiddenTitle": "You are not a member of this group",
+    "forbiddenHelp": "Ask a member of the group to send you its invite link.",
+    "backHome": "Back to my groups",
+    "errors": {
+      "PARTICIPANT_TAKEN": "This participant is already linked to another account.",
+      "DUPLICATE_NAME": "A participant with this name already exists. Pick it in the list, or use another name.",
+      "GROUP_ALREADY_CLAIMED": "Someone has already linked this group. Ask them for the invite link.",
+      "generic": "Something went wrong. Please try again."
+    }
+  },
+  "Invite": {
+    "title": "Invite link",
+    "description": "Anyone who opens this link and logs in can join the group.",
+    "regenerate": "Create a new link",
+    "regenerateHelp": "The current link will stop working.",
+    "loading": "Loading the invite link…"
+  },
+  "GroupNav": {
+    "overview": "Home",
+    "expenses": "Expenses",
+    "settlements": "Settle up",
+    "stats": "Statistics",
+    "more": "More",
+    "information": "Group info",
+    "members": "Participants",
+    "activity": "Activity",
+    "settings": "Group settings"
+  },
+  "GroupOverview": {
+    "summaryTitle": "Group summary",
+    "groupTotal": "Total spent by the group",
+    "myShare": "My share of it",
+    "recentTitle": "Recent expenses",
+    "recentDescription": "The latest shared expenses of the group.",
+    "addExpense": "Add expense",
+    "noExpenses": "No expense yet. Add the first one!",
+    "allExpenses": "See all expenses"
+  },
+  "Settlements": {
+    "title": "Settle up",
+    "Mine": {
+      "title": "{name}'s settlement",
+      "description": "Based on every expense recorded so far.",
+      "toSend": "I send",
+      "toReceive": "I receive",
+      "sendTo": "Send {amount} to {name}",
+      "receiveFrom": "Receive {amount} from {name}",
+      "settled": "You have nothing to send or receive.",
+      "status": "Status:",
+      "statusPending": "Not settled",
+      "statusSettled": "Settled",
+      "goSettle": "See how to settle",
+      "statusWaiting": "Waiting for confirmation",
+      "sentWaiting": "(sent, waiting for confirmation)",
+      "toConfirmInline": "(check the request)",
+      "toConfirm": "{count, plural, one {# transfer is} other {# transfers are}} waiting for your confirmation.",
+      "confirmFrom": "Did you receive {amount} from {name}?"
+    },
+    "Suggested": {
+      "title": "Transfers to make",
+      "description": "The fewest transfers that settle everyone. The person on the left sends the money.",
+      "none": "Nobody owes anything in this group.",
+      "to": "sends to",
+      "recordTransfer": "I sent it",
+      "waitingForSender": "{name} will ask you to confirm once sent",
+      "viewRequest": "See my request",
+      "confirmReceipt": "Confirm receipt"
+    },
+    "Results": {
+      "title": "Everyone's result",
+      "description": "What each person paid for shared expenses, minus their own share. Tap a name to see the calculation.",
+      "willReceive": "Receives {amount}",
+      "willSend": "Sends {amount}",
+      "settled": "Settled",
+      "me": "me",
+      "paid": "Paid for shared expenses",
+      "share": "Own share of expenses",
+      "sent": "Transfers sent",
+      "received": "Transfers received",
+      "result": "Result"
+    },
+    "History": {
+      "title": "Transfers",
+      "description": "Transfers members said they sent, and whether the recipient confirmed them. They are not counted as expenses.",
+      "none": "No transfer recorded yet."
+    },
+    "transferTitle": "Transfer",
+    "Status": {
+      "UNSETTLED": "Not settled",
+      "PENDING": "Waiting for confirmation",
+      "CONFIRMED": "Settled",
+      "REJECTED": "Rejected",
+      "CANCELED": "Canceled",
+      "LEGACY": "Recorded (old)"
+    },
+    "Request": {
+      "title": "I sent money",
+      "description": "Record a transfer you made, then the recipient confirms they received it. Only confirmed transfers settle balances.",
+      "from": "From:",
+      "me": "me",
+      "to": "To",
+      "owed": "(you owe {amount})",
+      "amount": "Amount sent",
+      "amountHint": "You can send part of it: the rest stays to settle.",
+      "amountTooLow": "Enter an amount above zero.",
+      "amountTooHigh": "That is more than you owe ({amount}).",
+      "paidAt": "Date sent",
+      "note": "Note (optional)",
+      "notePlaceholder": "e.g. Bank transfer, Kakao Pay",
+      "proof": "Proof (optional)",
+      "disclaimer": "Spliit does not check bank transfers. This is a record you and {name} confirm between you.",
+      "submit": "Send for confirmation",
+      "cancel": "Cancel",
+      "nothingToSend": "You do not owe anything in this group.",
+      "allPending": "Your transfers are already waiting for confirmation.",
+      "back": "Back to Settle up"
+    },
+    "Detail": {
+      "title": "Transfer",
+      "notFound": "This transfer was not found.",
+      "explain": {
+        "PENDING": "{from} says the money was sent. Waiting for {to} to confirm.",
+        "CONFIRMED": "{to} confirmed receiving it. It is counted in the balances.",
+        "REJECTED": "{to} says the money was not received. Balances are unchanged.",
+        "CANCELED": "{from} canceled this request. Balances are unchanged."
+      },
+      "paidAt": "Sent on",
+      "requestedAt": "Requested",
+      "respondedAt": "Answered",
+      "note": "Note",
+      "rejectReason": "Reason",
+      "proof": "Proof",
+      "amountChanged": "Expenses changed since this request: {from} now owes {to} {amount}.",
+      "checkYourAccount": "Check that {amount} from {from} arrived before confirming.",
+      "recipientNotJoined": "{to} has not joined the group with an account yet: they can confirm once they join.",
+      "reasonLabel": "Why? (optional)",
+      "confirm": "I received {amount}",
+      "reject": "I did not receive it",
+      "rejectSubmit": "Confirm: not received",
+      "back": "Back",
+      "cancelRequest": "Cancel my request",
+      "toSettlements": "Back to Settle up"
+    },
+    "Errors": {
+      "ALREADY_PENDING": "A request to this person is already waiting for confirmation.",
+      "AMOUNT_TOO_HIGH": "That is more than you owe.",
+      "NOTHING_TO_SETTLE": "You do not owe this person anything now.",
+      "INVALID_AMOUNT": "Enter an amount above zero.",
+      "NOT_PENDING": "This request was already answered.",
+      "NOT_SENDER": "Only the sender can do this.",
+      "NOT_RECIPIENT": "Only the recipient can do this.",
+      "NOT_FOUND": "Not found.",
+      "generic": "Something went wrong. Please try again."
+    }
+  },
+  "Members": {
+    "title": "Participants",
+    "description": "Everyone in the group, and who has joined with an account.",
+    "you": "You",
+    "owner": "Owner",
+    "joined": "Joined",
+    "notJoined": "Not joined yet",
+    "edit": "Add or rename participants",
+    "inviteTitle": "Invite link",
+    "inviteDescription": "Send this link to participants who have not joined yet: they log in and pick their name.",
+    "copy": "Copy"
   }
 }

@@ -15,7 +15,7 @@
 import type { AppRouter } from '@/trpc/routers/_app'
 import { createTRPCClient, httpBatchLink, httpLink } from '@trpc/client'
 import superjson from 'superjson'
-import { baseUrl } from './config'
+import { baseUrl, PERF_USER } from './config'
 
 /**
  * The server tags `Prisma.Decimal` values as `decimal.js` (src/trpc/init.ts),
@@ -56,8 +56,36 @@ export type Recording = {
 
 let current: Recording | null = null
 
+/** Session cookie of PERF_USER, set by `signIn()` before the first step. */
+let sessionCookie = ''
+
+/** Signs in as the seeded PERF_USER; every tRPC call then carries the session. */
+export async function signIn(): Promise<void> {
+  const response = await fetch(`${baseUrl}/api/auth/sign-in/email`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', origin: baseUrl },
+    body: JSON.stringify({
+      email: PERF_USER.email,
+      password: PERF_USER.password,
+    }),
+  })
+  if (!response.ok)
+    throw new Error(
+      `Could not sign in as ${PERF_USER.email} (HTTP ${response.status}). Was the database seeded?`,
+    )
+  sessionCookie = response.headers
+    .getSetCookie()
+    .map((cookie) => cookie.split(';')[0])
+    .join('; ')
+}
+
 const recordingFetch: typeof fetch = async (input, init) => {
-  const response = await fetch(input as RequestInfo, init as RequestInit)
+  const headers = new Headers(init?.headers)
+  if (sessionCookie) headers.set('cookie', sessionCookie)
+  const response = await fetch(input as RequestInfo, {
+    ...(init as RequestInit),
+    headers,
+  })
   if (!current) return response
 
   // Read a clone so the body stays consumable by tRPC itself.

@@ -12,7 +12,20 @@ import { ExpenseFormValues, GroupFormValues } from '@/lib/schemas'
 // Re-exported for backwards compatibility with existing server-side importers.
 export { randomId }
 
-export async function createGroup(groupFormValues: GroupFormValues) {
+/**
+ * Who performed an action, as resolved on the server from the session -- never
+ * taken from client input. Recorded in the activity log.
+ */
+export type Actor = { participantId: string; userId: string }
+
+/**
+ * Creates a group. When `creatorUserId` is given, the first participant of the
+ * form is the creator: it is linked to their account and made the group owner.
+ */
+export async function createGroup(
+  groupFormValues: GroupFormValues,
+  creatorUserId?: string,
+) {
   return prisma.group.create({
     data: {
       id: randomId(),
@@ -22,9 +35,12 @@ export async function createGroup(groupFormValues: GroupFormValues) {
       currencyCode: groupFormValues.currencyCode,
       participants: {
         createMany: {
-          data: groupFormValues.participants.map(({ name }) => ({
+          data: groupFormValues.participants.map(({ name }, index) => ({
             id: randomId(),
             name,
+            ...(creatorUserId && index === 0
+              ? { userId: creatorUserId, role: 'OWNER' as const }
+              : {}),
           })),
         },
       },
@@ -36,7 +52,7 @@ export async function createGroup(groupFormValues: GroupFormValues) {
 export async function createExpense(
   expenseFormValues: ExpenseFormValues,
   groupId: string,
-  participantId?: string,
+  actor?: Actor,
   // The expense form mints the id up front so the split it previews is the
   // one the saved expense gets (the id seeds who takes the leftover minor
   // unit, see `getExpenseShares`).
@@ -54,7 +70,8 @@ export async function createExpense(
   }
 
   await logActivity(groupId, ActivityType.CREATE_EXPENSE, {
-    participantId,
+    participantId: actor?.participantId,
+    actorUserId: actor?.userId,
     expenseId,
     data: expenseFormValues.title,
   })
@@ -115,11 +132,12 @@ export async function createExpense(
 export async function deleteExpense(
   groupId: string,
   expenseId: string,
-  participantId?: string,
+  actor?: Actor,
 ) {
   const existingExpense = await getExpense(groupId, expenseId)
   await logActivity(groupId, ActivityType.DELETE_EXPENSE, {
-    participantId,
+    participantId: actor?.participantId,
+    actorUserId: actor?.userId,
     expenseId,
     data: existingExpense?.title,
   })
@@ -138,7 +156,7 @@ const GROUP_DELETION_GRACE_PERIOD_MS = 30 * 24 * 60 * 60 * 1000
 export async function scheduleGroupDeletion(
   groupId: string,
   groupName: string,
-  participantId?: string,
+  actor?: Actor,
 ) {
   // A single conditional update, so that two concurrent requests cannot both
   // succeed, nor push the deletion date back.
@@ -155,11 +173,12 @@ export async function scheduleGroupDeletion(
   }
 
   await logActivity(groupId, ActivityType.SCHEDULE_GROUP_DELETION, {
-    participantId,
+    participantId: actor?.participantId,
+    actorUserId: actor?.userId,
   })
 }
 
-export async function restoreGroup(groupId: string, participantId?: string) {
+export async function restoreGroup(groupId: string, actor?: Actor) {
   // Once its deletion date has passed, the group may be being purged: it can
   // no longer be restored.
   const { count } = await prisma.group.updateMany({
@@ -171,7 +190,10 @@ export async function restoreGroup(groupId: string, participantId?: string) {
       'Group is not scheduled for deletion, or can no longer be restored',
     )
 
-  await logActivity(groupId, ActivityType.RESTORE_GROUP, { participantId })
+  await logActivity(groupId, ActivityType.RESTORE_GROUP, {
+    participantId: actor?.participantId,
+    actorUserId: actor?.userId,
+  })
 }
 
 export async function getGroupExpensesParticipants(groupId: string) {
@@ -212,7 +234,7 @@ export async function updateExpense(
   groupId: string,
   expenseId: string,
   expenseFormValues: ExpenseFormValues,
-  participantId?: string,
+  actor?: Actor,
 ) {
   const group = await getGroup(groupId)
   if (!group) throw new Error(`Invalid group ID: ${groupId}`)
@@ -229,7 +251,8 @@ export async function updateExpense(
   }
 
   await logActivity(groupId, ActivityType.UPDATE_EXPENSE, {
-    participantId,
+    participantId: actor?.participantId,
+    actorUserId: actor?.userId,
     expenseId,
     data: expenseFormValues.title,
   })
@@ -357,12 +380,15 @@ export async function updateExpense(
 export async function updateGroup(
   groupId: string,
   groupFormValues: GroupFormValues,
-  participantId?: string,
+  actor?: Actor,
 ) {
   const existingGroup = await getGroup(groupId)
   if (!existingGroup) throw new Error('Invalid group ID')
 
-  await logActivity(groupId, ActivityType.UPDATE_GROUP, { participantId })
+  await logActivity(groupId, ActivityType.UPDATE_GROUP, {
+    participantId: actor?.participantId,
+    actorUserId: actor?.userId,
+  })
 
   return prisma.group.update({
     where: { id: groupId },
@@ -409,10 +435,20 @@ export async function getCategories() {
 
 export async function getGroupExpenses(
   groupId: string,
-  options?: { offset?: number; length?: number; filter?: string },
+  options?: {
+    offset?: number
+    length?: number
+    filter?: string
+    /**
+     * 'expenses' leaves out transfers between members (reimbursements),
+     * 'reimbursements' returns only those. All by default, as balances need.
+     */
+    kind?: 'all' | 'expenses' | 'reimbursements'
+  },
 ) {
   await createRecurringExpenses()
 
+  const kind = options?.kind ?? 'all'
   return prisma.expense.findMany({
     select: {
       amount: true,
@@ -437,6 +473,8 @@ export async function getGroupExpenses(
     },
     where: {
       groupId,
+      isReimbursement:
+        kind === 'all' ? undefined : kind === 'reimbursements' ? true : false,
       // Search matches the title or the notes (#601).
       OR: options?.filter
         ? [
@@ -532,7 +570,12 @@ export async function getActivities(
 export async function logActivity(
   groupId: string,
   activityType: ActivityType,
-  extra?: { participantId?: string; expenseId?: string; data?: string },
+  extra?: {
+    participantId?: string
+    actorUserId?: string
+    expenseId?: string
+    data?: string
+  },
 ) {
   return prisma.activity.create({
     data: {

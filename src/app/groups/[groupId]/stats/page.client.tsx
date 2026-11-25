@@ -21,7 +21,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { useActiveUser } from '@/lib/hooks'
 import { getCurrencyFromGroup } from '@/lib/utils'
 import { trpc } from '@/trpc/client'
 import { useTranslations } from 'next-intl'
@@ -30,9 +29,6 @@ import { useState } from 'react'
 export function TotalsPageClient() {
   const t = useTranslations('Stats')
   const { groupId, group } = useCurrentGroup()
-  const activeUser = useActiveUser(groupId)
-  const participantId =
-    activeUser && activeUser !== 'None' ? activeUser : undefined
 
   const [period, setPeriod] = useState<StatsPeriod>('all')
   const [customRange, setCustomRange] = useState<StatsRange>({})
@@ -40,7 +36,6 @@ export function TotalsPageClient() {
 
   const { data } = trpc.groups.stats.overview.useQuery({
     groupId,
-    participantId,
     from: range.from,
     to: range.to,
   })

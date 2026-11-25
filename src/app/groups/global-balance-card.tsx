@@ -1,7 +1,5 @@
 'use client'
 
-import { RecentGroups } from '@/app/groups/recent-groups-helpers'
-import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -9,97 +7,37 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
 import { Currency } from '@/lib/currency'
-import { MAX_GROUPS_PER_QUERY } from '@/lib/group-query-limits'
 import { cn, formatCurrency, getCurrencyFromGroup } from '@/lib/utils'
-import { trpc } from '@/trpc/client'
+import { AppRouterOutput } from '@/trpc/routers/_app'
 import { useLocale, useTranslations } from 'next-intl'
-import { useEffect, useState } from 'react'
 
 type CurrencyBalance = {
   currency: Currency
   amount: number
 }
 
-export function GlobalBalanceCard({ groups }: { groups: RecentGroups }) {
-  const [activeUserGroups, setActiveUserGroups] = useState<
-    { groupId: string; participantId: string }[] | null
-  >(null)
+type MyGroups = AppRouterOutput['groups']['list']['groups']
 
-  useEffect(() => {
-    setActiveUserGroups(
-      groups.flatMap((group) => {
-        const participantId = localStorage.getItem(`${group.id}-activeUser`)
-        if (!participantId || participantId === 'None') return []
-        return [{ groupId: group.id, participantId }]
-      }),
-    )
-  }, [groups])
-
-  // Wait until local storage has been read on the client.
-  if (activeUserGroups === null) return null
-
-  // Nothing to aggregate until the user has told us who they are in a group.
-  if (activeUserGroups.length === 0) return null
-
-  return <GlobalBalanceCard_ activeUserGroups={activeUserGroups} />
-}
-
-function GlobalBalanceCard_({
-  activeUserGroups,
-}: {
-  activeUserGroups: { groupId: string; participantId: string }[]
-}) {
+/** The signed-in user's net balance over all their groups, per currency. */
+export function GlobalBalanceCard({ groups }: { groups: MyGroups }) {
   const locale = useLocale()
   const t = useTranslations('Groups.GlobalBalance')
-  const { data, isLoading, isError, refetch } =
-    trpc.groups.balances.forUser.useQuery({
-      groups: activeUserGroups.slice(0, MAX_GROUPS_PER_QUERY),
-    })
 
-  if (isError) {
-    return (
-      <Card className="mb-4">
-        <CardHeader>
-          <CardTitle>{t('title')}</CardTitle>
-          <CardDescription>{t('description')}</CardDescription>
-        </CardHeader>
-        <CardContent className="text-sm space-y-2">
-          <p>{t('loadError')}</p>
-          <Button variant="secondary" onClick={() => refetch()}>
-            {t('retry')}
-          </Button>
-        </CardContent>
-      </Card>
-    )
-  }
-
-  if (isLoading || !data) {
-    return (
-      <Card className="mb-4">
-        <CardHeader>
-          <CardTitle>{t('title')}</CardTitle>
-          <CardDescription>{t('description')}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Skeleton className="h-6 w-40" />
-        </CardContent>
-      </Card>
-    )
-  }
+  // Not useful with a single group: its own card already shows it.
+  if (groups.length < 2) return null
 
   // Amounts from different currencies cannot be summed, so we aggregate them
   // into one bucket per currency.
   const byCurrency = new Map<string, CurrencyBalance>()
-  for (const balance of data.balances) {
+  for (const balance of groups) {
     const currency = getCurrencyFromGroup(balance)
     const key = currency.code || `custom:${currency.symbol}`
     const existing = byCurrency.get(key)
     if (existing) {
-      existing.amount += balance.amount
+      existing.amount += balance.balance
     } else {
-      byCurrency.set(key, { currency, amount: balance.amount })
+      byCurrency.set(key, { currency, amount: balance.balance })
     }
   }
 

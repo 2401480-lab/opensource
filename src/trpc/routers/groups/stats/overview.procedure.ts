@@ -15,7 +15,7 @@ import {
   getTotalActiveUserShare,
   getTotalGroupSpending,
 } from '@/lib/totals'
-import { baseProcedure } from '@/trpc/init'
+import { groupProcedure } from '@/trpc/init'
 import { z } from 'zod'
 
 /**
@@ -26,16 +26,15 @@ import { z } from 'zod'
  * Recurring stats are range-independent (they reflect the currently active
  * subscriptions) and come from a separate query.
  */
-export const getStatsOverviewProcedure = baseProcedure
+export const getStatsOverviewProcedure = groupProcedure
   .input(
     z.object({
       groupId: z.string().min(1),
-      participantId: z.string().optional(),
       from: z.string().optional(),
       to: z.string().optional(),
     }),
   )
-  .query(async ({ input: { groupId, participantId, from, to } }) => {
+  .query(async ({ ctx, input: { groupId, from, to } }) => {
     // getGroupExpenses and getActiveRecurringExpenses both materialize due
     // recurring frames; run them sequentially so the two passes don't race
     // each other (the second is a no-op once the first has materialized).
@@ -45,6 +44,8 @@ export const getStatsOverviewProcedure = baseProcedure
     ])
     const recurringExpenses = await getActiveRecurringExpenses(groupId)
 
+    // "Your" totals are the signed-in member's, resolved on the server.
+    const participantId: string | undefined = ctx.membership.participantId
     const expenses = filterExpensesByDateRange(allExpenses, from, to)
     const participants = group?.participants ?? []
 

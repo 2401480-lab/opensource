@@ -37,7 +37,7 @@ PERF_LARGE_GROUP_EXPENSES=10000 PERF_ITERATIONS=50 npm run perf
 
 | Scenario                 | Screen                            | Procedures                                               |
 | ------------------------ | --------------------------------- | -------------------------------------------------------- |
-| `list-groups:home`       | `/groups`                         | `groups.list` + `groups.balances.forUser`                |
+| `list-groups:home`       | `/groups`                         | `groups.list` (the signed-in user's groups and status)   |
 | `view-group:first-page`  | `/groups/[id]/expenses`           | `groups.get` + `groups.expenses.list`                    |
 | `view-group:deep-page`   | scrolled halfway down that list   | `groups.expenses.list` at a deep offset                  |
 | `view-group:search`      | the search box on that list       | `groups.expenses.list` with a filter                     |
@@ -91,8 +91,13 @@ It counts **Prisma operations**, not raw SQL statements: one `findMany` with an
 `include` may issue several statements but counts once. That is still exactly
 reproducible, and it is the right granularity for what the counter is for —
 noticing that a procedure now runs N queries where it used to run a constant
-number. It is what makes the fan-out in `groups.balances.forUser` a catchable
-regression, since that one does not change the response by a single byte.
+number. It is what made the old per-group fan-out of the home screen (61
+queries, before accounts) a catchable regression, since that did not change the
+response by a single byte.
+
+The suite signs in as a seeded user (`PERF_USER` in `config.ts`), so every
+step also pays for the session and membership checks; `budgets.ts` names those
+costs (`AUTH_QUERIES`, `MEMBERSHIP_QUERY`).
 
 ## Trend over releases
 

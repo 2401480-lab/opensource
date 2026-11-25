@@ -1,9 +1,10 @@
 import {
+  AFTER_SAVE_URL,
   createGroup,
   expectBalance,
   expenseCard,
-  EXPENSES_URL,
   openExpense,
+  openMoreOptions,
   openTab,
   paidForRow,
   uniqueSuffix,
@@ -54,6 +55,7 @@ test('converts a foreign-currency expense into the group currency', async ({
   await expect(page.locator('input[name="originalAmount"]')).toBeHidden()
 
   await fillStable(page.locator('input[name="title"]'), 'Paris hotel')
+  await openMoreOptions(page)
   await selectRadixOption(
     page,
     fieldByLabel(page, 'Currency of expense').getByRole('combobox'),
@@ -71,7 +73,7 @@ test('converts a foreign-currency expense into the group currency', async ({
 
   await selectRadixOption(page, page.getByTestId('paid-by'), 'Alice')
   await page.getByRole('button', { name: 'Create', exact: true }).click()
-  await page.waitForURL(EXPENSES_URL, { timeout: 30_000 })
+  await page.waitForURL(AFTER_SAVE_URL, { timeout: 30_000 })
 
   // The list and the balances are all in the group currency.
   await expect(expenseCard(page, 'Paris hotel')).toContainText(money(100))
@@ -83,6 +85,7 @@ test('converts a foreign-currency expense into the group currency', async ({
   await openTab(page, 'Expenses')
   await openExpense(page, 'Paris hotel')
   await expect(page.locator('input[name="originalAmount"]')).toHaveValue(/^80/)
+  await openMoreOptions(page)
   await expect(
     fieldByLabel(page, 'Currency of expense').getByRole('combobox'),
   ).toContainText('EUR')
@@ -98,6 +101,7 @@ test('lets a custom rate override the fetched one', async ({ page }) => {
   await openExpenseForm(page, groupId)
 
   await fillStable(page.locator('input[name="title"]'), 'Berlin train')
+  await openMoreOptions(page)
   await selectRadixOption(
     page,
     fieldByLabel(page, 'Currency of expense').getByRole('combobox'),
@@ -113,7 +117,7 @@ test('lets a custom rate override the fetched one', async ({ page }) => {
 
   await selectRadixOption(page, page.getByTestId('paid-by'), 'Alice')
   await page.getByRole('button', { name: 'Create', exact: true }).click()
-  await page.waitForURL(EXPENSES_URL, { timeout: 30_000 })
+  await page.waitForURL(AFTER_SAVE_URL, { timeout: 30_000 })
 
   await expect(expenseCard(page, 'Berlin train')).toContainText(money(160))
   await openTab(page, 'Balances')
@@ -131,6 +135,7 @@ test('keeps a by-amount split of a converted expense when reopened', async ({
 
   await openExpenseForm(page, groupId)
   await fillStable(page.locator('input[name="title"]'), 'Lisbon tickets')
+  await openMoreOptions(page)
   await selectRadixOption(
     page,
     fieldByLabel(page, 'Currency of expense').getByRole('combobox'),
@@ -151,7 +156,7 @@ test('keeps a by-amount split of a converted expense when reopened', async ({
   await fillStable(shareInput('Bob'), '40')
 
   await page.getByRole('button', { name: 'Create', exact: true }).click()
-  await page.waitForURL(EXPENSES_URL, { timeout: 30_000 })
+  await page.waitForURL(AFTER_SAVE_URL, { timeout: 30_000 })
 
   // Regression for #621: the per-row foreign-amount inputs used to register
   // themselves as fields, which marked the split dirty and rebalanced it
@@ -169,6 +174,7 @@ test('exports the original currency and rate to CSV', async ({ page }) => {
 
   await openExpenseForm(page, groupId)
   await fillStable(page.locator('input[name="title"]'), 'Rome dinner')
+  await openMoreOptions(page)
   await selectRadixOption(
     page,
     fieldByLabel(page, 'Currency of expense').getByRole('combobox'),
@@ -178,7 +184,7 @@ test('exports the original currency and rate to CSV', async ({ page }) => {
   await expect(page.locator('input[name="amount"]')).toHaveValue('100')
   await selectRadixOption(page, page.getByTestId('paid-by'), 'Alice')
   await page.getByRole('button', { name: 'Create', exact: true }).click()
-  await page.waitForURL(EXPENSES_URL, { timeout: 30_000 })
+  await page.waitForURL(AFTER_SAVE_URL, { timeout: 30_000 })
 
   const response = await page.request.get(
     `/groups/${groupId}/expenses/export/csv`,

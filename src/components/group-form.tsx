@@ -24,13 +24,6 @@ import {
   HoverCardTrigger,
 } from '@/components/ui/hover-card'
 import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Locale } from '@/i18n/request'
 import { useAnalytics } from '@/lib/analytics/context'
 import { getGroup } from '@/lib/api'
@@ -44,30 +37,38 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Save, Trash2 } from 'lucide-react'
 import { useLocale, useTranslations } from 'next-intl'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
 import { useFieldArray, useForm } from 'react-hook-form'
 import { CurrencySelector } from './currency-selector'
 import { Textarea } from './ui/textarea'
 
 export type Props = {
   group?: NonNullable<Awaited<ReturnType<typeof getGroup>>>
-  onSubmit: (
-    groupFormValues: GroupFormValues,
-    participantId?: string,
-  ) => Promise<void>
+  onSubmit: (groupFormValues: GroupFormValues) => Promise<void>
   protectedParticipantIds?: string[]
   /** Resolved on the server, since the runtime variable is not public. */
   defaultCurrencyCode?: string
   /** Whether to offer deleting the group (ENABLE_GROUP_DELETION). */
   enableGroupDeletion?: boolean
+  /**
+   * Creating: the signed-in user's name. They are the first participant of the
+   * new group (the server links that participant to their account).
+   */
+  currentUserName?: string
+  /** Editing: the signed-in user's participant, shown as "you". */
+  myParticipantId?: string
+  /** Editing: participants linked to an account (members). */
+  linkedParticipantIds?: string[]
 }
 
 export function GroupForm({
   group,
   onSubmit,
   protectedParticipantIds = [],
-  defaultCurrencyCode = 'USD',
+  defaultCurrencyCode = 'KRW',
   enableGroupDeletion = false,
+  currentUserName = '',
+  myParticipantId,
+  linkedParticipantIds = [],
 }: Props) {
   const locale = useLocale()
   const t = useTranslations('GroupForm')
@@ -86,11 +87,9 @@ export function GroupForm({
           information: '',
           currency: '',
           currencyCode: defaultCurrencyCode, // TODO: derive from the locale when not configured
-          participants: [
-            { name: t('Participants.John') },
-            { name: t('Participants.Jane') },
-            { name: t('Participants.Jack') },
-          ],
+          // The creator first; others can be added now or join later with
+          // the invite link.
+          participants: [{ name: currentUserName }],
         },
   })
   const { fields, append, remove } = useFieldArray({
@@ -100,29 +99,11 @@ export function GroupForm({
   })
   const sendEvent = useAnalytics()
 
-  const [activeUser, setActiveUser] = useState<string | null>(null)
-  useEffect(() => {
-    if (activeUser === null) {
-      const currentActiveUser =
-        fields.find(
-          (f) => f.id === localStorage.getItem(`${group?.id}-activeUser`),
-        )?.name || t('Settings.ActiveUserField.none')
-      setActiveUser(currentActiveUser)
-    }
-  }, [t, activeUser, fields, group?.id])
-
-  const updateActiveUser = () => {
-    if (!activeUser) return
-    if (group?.id) {
-      const participant = group.participants.find((p) => p.name === activeUser)
-      if (participant?.id) {
-        localStorage.setItem(`${group.id}-activeUser`, participant.id)
-      } else {
-        localStorage.setItem(`${group.id}-activeUser`, activeUser)
-      }
-    } else {
-      localStorage.setItem('newGroup-activeUser', activeUser)
-    }
+  const participantBadge = (id: string | undefined, index: number) => {
+    if (!group) return index === 0 ? t('Participants.you') : null
+    if (id && id === myParticipantId) return t('Participants.you')
+    if (id && linkedParticipantIds.includes(id)) return t('Participants.member')
+    return null
   }
 
   return (
@@ -137,11 +118,7 @@ export function GroupForm({
           } else {
             sendEvent({ event: 'group: create', props: {} }, `/groups`)
           }
-          await onSubmit(
-            values,
-            group?.participants.find((p) => p.name === activeUser)?.id ??
-              undefined,
-          )
+          await onSubmit(values)
         })}
       >
         <Card className="mb-4">
@@ -279,8 +256,14 @@ export function GroupForm({
                               {...field}
                               placeholder={t('Participants.new')}
                             />
-                            {item.id &&
-                            protectedParticipantIds.includes(item.id) ? (
+                            {participantBadge(item.id, index) && (
+                              <span className="self-center flex-shrink-0 text-xs rounded-full border px-2 py-0.5 text-muted-foreground">
+                                {participantBadge(item.id, index)}
+                              </span>
+                            )}
+                            {(!group && index === 0) ||
+                            (item.id &&
+                              protectedParticipantIds.includes(item.id)) ? (
                               <HoverCard>
                                 <HoverCardTrigger>
                                   <Button
@@ -334,56 +317,9 @@ export function GroupForm({
           </CardFooter>
         </Card>
 
-        <Card className="mb-4">
-          <CardHeader>
-            <CardTitle>{t('Settings.title')}</CardTitle>
-            <CardDescription>{t('Settings.description')}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid sm:grid-cols-2 gap-4">
-              {activeUser !== null && (
-                <FormItem>
-                  <FormLabel>{t('Settings.ActiveUserField.label')}</FormLabel>
-                  <FormControl>
-                    <Select
-                      onValueChange={(value) => {
-                        setActiveUser(value)
-                      }}
-                      defaultValue={activeUser}
-                    >
-                      <SelectTrigger>
-                        <SelectValue
-                          placeholder={t(
-                            'Settings.ActiveUserField.placeholder',
-                          )}
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {[
-                          { name: t('Settings.ActiveUserField.none') },
-                          ...form.watch('participants'),
-                        ]
-                          .filter((item) => item.name.length > 0)
-                          .map(({ name }) => (
-                            <SelectItem key={name} value={name}>
-                              {name}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
-                  <FormDescription>
-                    {t('Settings.ActiveUserField.description')}
-                  </FormDescription>
-                </FormItem>
-              )}
-            </div>
-          </CardContent>
-        </Card>
         <div className="flex mt-4 gap-2">
           <SubmitButton
             loadingContent={t(group ? 'Settings.saving' : 'Settings.creating')}
-            onClick={updateActiveUser}
           >
             <Save className="w-4 h-4 mr-2" />{' '}
             {t(group ? 'Settings.save' : 'Settings.create')}

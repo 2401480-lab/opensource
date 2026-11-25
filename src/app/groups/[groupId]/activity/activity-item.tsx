@@ -2,12 +2,19 @@
 
 import { Button } from '@/components/ui/button'
 import { ActivityType, Participant } from '@/generated/prisma/browser'
-import { cn, DateTimeStyle, formatDate } from '@/lib/utils'
+import {
+  cn,
+  DateTimeStyle,
+  formatCurrency,
+  formatDate,
+  getCurrencyFromGroup,
+} from '@/lib/utils'
 import { AppRouterOutput } from '@/trpc/routers/_app'
 import { ChevronRight } from 'lucide-react'
 import { useLocale, useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useCurrentGroup } from '../current-group-context'
 
 export type Activity =
   AppRouterOutput['groups']['activities']['list']['activities'][number]
@@ -19,15 +26,49 @@ type Props = {
   dateStyle: DateTimeStyle
 }
 
+/** For settlement activities: `{ amount, from, to }` stored in `data`. */
+function parseSettlementData(data: string | null) {
+  try {
+    const parsed: unknown = JSON.parse(data ?? '')
+    if (
+      parsed &&
+      typeof parsed === 'object' &&
+      'amount' in parsed &&
+      typeof parsed.amount === 'number'
+    )
+      return parsed as {
+        amount: number
+        from: string
+        to: string
+      }
+  } catch {}
+  return null
+}
+
 function useSummary(activity: Activity, participantName?: string) {
   const t = useTranslations('Activity')
+  const locale = useLocale()
+  const { group } = useCurrentGroup()
   const participant = participantName ?? t('someone')
   const expense = activity.data ?? ''
+  const settlement = parseSettlementData(activity.data)
+  const nameOf = (id?: string) =>
+    group?.participants.find((p) => p.id === id)?.name ?? t('someone')
 
   const tr = (key: string) =>
     t.rich(key, {
       expense,
       participant,
+      amount:
+        settlement && group
+          ? formatCurrency(
+              getCurrencyFromGroup(group),
+              settlement.amount,
+              locale,
+            )
+          : '',
+      from: nameOf(settlement?.from),
+      to: nameOf(settlement?.to),
       em: (chunks) => <em>&ldquo;{chunks}&rdquo;</em>,
       strong: (chunks) => <strong>{chunks}</strong>,
     })
@@ -44,6 +85,16 @@ function useSummary(activity: Activity, participantName?: string) {
     return <>{tr('groupDeletionScheduled')}</>
   } else if (activity.activityType == ActivityType.RESTORE_GROUP) {
     return <>{tr('groupRestored')}</>
+  } else if (activity.activityType == ActivityType.JOIN_GROUP) {
+    return <>{tr('groupJoined')}</>
+  } else if (activity.activityType == ActivityType.REQUEST_SETTLEMENT) {
+    return <>{tr('settlementRequested')}</>
+  } else if (activity.activityType == ActivityType.CONFIRM_SETTLEMENT) {
+    return <>{tr('settlementConfirmed')}</>
+  } else if (activity.activityType == ActivityType.REJECT_SETTLEMENT) {
+    return <>{tr('settlementRejected')}</>
+  } else if (activity.activityType == ActivityType.CANCEL_SETTLEMENT) {
+    return <>{tr('settlementCanceled')}</>
   }
 }
 
@@ -56,7 +107,12 @@ export function ActivityItem({
   const router = useRouter()
   const locale = useLocale()
 
-  const expenseExists = activity.expense !== undefined
+  const href = activity.settlementId
+    ? `/groups/${groupId}/settlements/${activity.settlementId}`
+    : activity.expense !== undefined
+      ? `/groups/${groupId}/expenses/${activity.expenseId}/edit`
+      : null
+  const expenseExists = href !== null
   const summary = useSummary(activity, participant?.name)
 
   return (
@@ -66,9 +122,7 @@ export function ActivityItem({
         expenseExists && 'cursor-pointer',
       )}
       onClick={() => {
-        if (expenseExists) {
-          router.push(`/groups/${groupId}/expenses/${activity.expenseId}/edit`)
-        }
+        if (href) router.push(href)
       }}
     >
       <div className="flex flex-col justify-between items-start">
@@ -91,7 +145,7 @@ export function ActivityItem({
           className="self-center hidden sm:flex w-5 h-5"
           asChild
         >
-          <Link href={`/groups/${groupId}/expenses/${activity.expenseId}/edit`}>
+          <Link href={href ?? '#'}>
             <ChevronRight className="w-4 h-4" />
           </Link>
         </Button>

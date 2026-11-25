@@ -1,9 +1,9 @@
 import { Page } from '@playwright/test'
 import {
   addExpense,
+  AFTER_SAVE_URL,
   createGroup,
   expectBalance,
-  EXPENSES_URL,
   openExpense,
   openTab,
   paidForRow,
@@ -104,7 +104,7 @@ test('keeps a by-amount split that skips a participant when reopened', async ({
 
   // Saving without touching the split must not change it either.
   await page.getByRole('button', { name: 'Save', exact: true }).click()
-  await page.waitForURL(EXPENSES_URL, { timeout: 30_000 })
+  await page.waitForURL(AFTER_SAVE_URL, { timeout: 30_000 })
 
   await openTab(page, 'Balances')
   await expectBalance(page, 'Alice', 40)
@@ -212,7 +212,7 @@ test('offers the remainder again when an amount is cleared', async ({
 
   // The suggestion is what gets saved when the input is left empty.
   await submit.click()
-  await page.waitForURL(/\/groups\/[^/]+\/expenses(\?|$)/, { timeout: 30_000 })
+  await page.waitForURL(AFTER_SAVE_URL, { timeout: 30_000 })
   await openTab(page, 'Balances')
   await expectBalance(page, 'Alice', 50)
   await expectBalance(page, 'Bob', -30)
@@ -270,7 +270,7 @@ test('saves an even split with the leftover cent where it was previewed', async 
     }
 
     await submit.click()
-    await page.waitForURL(EXPENSES_URL, { timeout: 30_000 })
+    await page.waitForURL(AFTER_SAVE_URL, { timeout: 30_000 })
 
     // The edit form previews with the saved id, i.e. the split that counts.
     await openExpense(page, title)
@@ -314,7 +314,7 @@ test('can retry a create whose response was lost', async ({ page }) => {
   await expect(submit).toBeEnabled()
 
   await submit.click()
-  await page.waitForURL(EXPENSES_URL, { timeout: 30_000 })
+  await page.waitForURL(AFTER_SAVE_URL, { timeout: 30_000 })
   await expect(
     page.getByTestId('expense-card').filter({ hasText: 'Lost' }),
   ).toHaveCount(2)

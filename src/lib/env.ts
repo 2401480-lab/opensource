@@ -37,6 +37,20 @@ const envSchema = z
   .object({
     POSTGRES_URL_NON_POOLING: z.string().url(),
     POSTGRES_PRISMA_URL: z.string().url(),
+    // Secret used to sign session cookies (better-auth). Required at runtime:
+    // src/lib/auth.ts refuses to start without it outside of tests. Generate
+    // one with `openssl rand -base64 32`; never commit it.
+    BETTER_AUTH_SECRET: z.preprocess(
+      interpretBlankEnvVarAsUndefined,
+      z.string().min(32).optional(),
+    ),
+    // Login and sign-up attempts are rate-limited in production (against
+    // password guessing). Only the end-to-end test stack, which signs up many
+    // users in a few seconds, turns this off.
+    AUTH_RATE_LIMIT_DISABLED: z.preprocess(
+      interpretEnvVarAsBool,
+      z.boolean().default(false),
+    ),
     // Runtime override for the public base URL, so a prebuilt image can be
     // told where it is reachable without a rebuild. Takes precedence over
     // NEXT_PUBLIC_BASE_URL, which is baked in at build time.
@@ -190,6 +204,20 @@ const envSchema = z
         code: ZodIssueCode.custom,
         message:
           'If ENABLE_EXPENSE_DOCUMENTS is set, then S3_* must be set too',
+      })
+    }
+    // Sessions cannot be signed securely without a secret: refuse to start a
+    // production server rather than fail on the first login. (Not during
+    // `next build`, which runs with the placeholder of scripts/build.env.)
+    if (
+      process.env.NODE_ENV === 'production' &&
+      process.env.NEXT_PHASE !== 'phase-production-build' &&
+      !env.BETTER_AUTH_SECRET
+    ) {
+      ctx.addIssue({
+        code: ZodIssueCode.custom,
+        message:
+          'BETTER_AUTH_SECRET must be set (at least 32 characters, e.g. `openssl rand -base64 32`)',
       })
     }
     if (env.ENABLE_GROUP_DELETION && !env.CRON_SECRET) {

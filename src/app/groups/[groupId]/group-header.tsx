@@ -21,7 +21,7 @@ export const GroupHeader = () => {
         </Link>
       </h1>
 
-      <div className="flex gap-2 justify-between">
+      <div className="flex gap-2 justify-between items-start">
         <GroupTabs groupId={groupId} />
         {group && <ShareButton group={group} />}
       </div>

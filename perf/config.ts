@@ -108,3 +108,16 @@ export const paidForCountFor = (group: number, expenseIndex: number) =>
 
 /** The expense addressed by the `view-expense` scenario. */
 export const targetExpenseIndex = Math.floor(config.largeGroupExpenses / 2)
+
+/**
+ * The account the suite signs in as. Every procedure needs a session since
+ * accounts were added; the seeder creates this user and links participant 0
+ * of every group to it, so it is a member (and owner) of all of them.
+ * Throwaway credentials for the disposable perf database only.
+ */
+export const PERF_USER = {
+  id: 'perf-user',
+  name: 'Perf User',
+  email: 'perf-user@perf.test',
+  password: 'perf-password-123',
+} as const

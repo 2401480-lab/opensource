@@ -20,7 +20,13 @@ test('creates a group, records expenses and computes balances', async ({
   })
 
   await expect(page.getByRole('heading', { name, exact: true })).toBeVisible()
-  await expect(page.getByText(/doesn.t contain any expense yet/)).toBeVisible()
+  // A new group opens on its home: what I have to do, then the latest expenses.
+  await expect(page.getByTestId('my-settlement')).toContainText(
+    'You have nothing to send or receive.',
+  )
+  await expect(
+    page.getByText('No expense yet. Add the first one!'),
+  ).toBeVisible()
 
   // Alice pays 90, Bob pays 30. Split evenly, so each owes 40.
   await addExpense(page, groupId, {
