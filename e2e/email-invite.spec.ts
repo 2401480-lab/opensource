@@ -76,7 +76,7 @@ test('an invited person accepts and joins as the invited participant', async ({
   const bob = await userWithEmail(browser, baseURL, 'Bob', bobEmail)
   await bob.goto('/groups')
   await expect(bob.getByTestId('received-invite')).toContainText(
-    `invited you to ${name} as Bob`,
+    `invited Bob to ${name}`,
   )
   await bob.getByRole('button', { name: 'Accept invitation' }).click()
   await bob.waitForURL(new RegExp(`/groups/${groupId}$`))

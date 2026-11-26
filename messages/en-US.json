@@ -686,7 +686,7 @@
     "unstar": "Remove from favorites",
     "invites": {
       "title": "Invitations",
-      "item": "{inviter} invited you to {group} as {participant}.",
+      "item": "{inviter} invited {participant} to {group}.",
       "accept": "Accept invitation",
       "decline": "Decline",
       "accepted": "You joined {group}.",

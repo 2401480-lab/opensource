@@ -622,7 +622,7 @@
     "unstar": "즐겨찾기에서 빼기",
     "invites": {
       "title": "받은 초대",
-      "item": "{inviter}님이 {group} 그룹에 {participant}(으)로 초대했어요.",
+      "item": "{inviter}님이 {participant}님을 {group} 그룹에 초대했어요.",
       "accept": "초대 받기",
       "decline": "거절",
       "accepted": "{group} 그룹에 참여했어요.",
