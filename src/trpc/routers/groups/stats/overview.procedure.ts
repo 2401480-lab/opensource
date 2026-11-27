@@ -3,12 +3,15 @@ import {
   getGroup,
   getGroupExpenses,
 } from '@/lib/api'
+import { fundBalance } from '@/lib/fund-rules'
 import { getMonthlyCategorySpending } from '@/lib/monthly-spending'
+import { prisma } from '@/lib/prisma'
 import {
   filterExpensesByDateRange,
   getRecurringSpending,
   getSpendingByCategory,
   getSpendingByParticipant,
+  getSpendingBySource,
   getSpendingOverTime,
   getSpendingSummary,
   getTotalActiveUserPaidFor,
@@ -49,7 +52,37 @@ export const getStatsOverviewProcedure = groupProcedure
     const expenses = filterExpensesByDateRange(allExpenses, from, to)
     const participants = group?.participants ?? []
 
+    // The shared fund (회비), for groups that use one: fees collected in the
+    // period (by fee month) and the account balance today.
+    let fund = null
+    if (group?.fundEnabled) {
+      const confirmed = await prisma.fundPayment.findMany({
+        where: { groupId, status: 'CONFIRMED' },
+        select: { month: true, amount: true },
+      })
+      const fromMonth = from?.slice(0, 7)
+      const toMonth = to?.slice(0, 7)
+      const inRange = confirmed.filter(
+        (p) =>
+          (!fromMonth || p.month >= fromMonth) &&
+          (!toMonth || p.month <= toMonth),
+      )
+      fund = {
+        collected: inRange.reduce((sum, p) => sum + p.amount, 0),
+        collectedCount: inRange.length,
+        balance: fundBalance({
+          openingBalance: group.fundOpeningBalance,
+          confirmedPayments: confirmed.map((p) => p.amount),
+          fundExpenses: allExpenses
+            .filter((e) => e.paymentSource === 'FUND' && !e.isReimbursement)
+            .map((e) => e.amount),
+        }),
+      }
+    }
+
     return {
+      bySource: getSpendingBySource(expenses),
+      fund,
       totalGroupSpendings: getTotalGroupSpending(expenses),
       totalParticipantSpendings:
         participantId !== undefined

@@ -7,8 +7,10 @@ import {
   getRecurringSpending,
   getSpendingByCategory,
   getSpendingByParticipant,
+  getSpendingBySource,
   getSpendingOverTime,
   getSpendingSummary,
+  getTotalActiveUserPaidFor,
   getTotalActiveUserShare,
   getTotalGroupSpending,
 } from './totals'
@@ -521,5 +523,50 @@ describe('getSpendingByParticipant shares', () => {
     expect(result.reduce((sum, { share }) => sum + share, 0)).toBe(
       getTotalGroupSpending(expenses),
     )
+  })
+})
+
+describe('expenses paid from the shared fund', () => {
+  const lunch = splitExpense('lunch', 9000, [
+    ['alice', 1],
+    ['bob', 1],
+    ['carol', 1],
+  ])
+  const toner = {
+    ...splitExpense('toner', 5000, [
+      ['alice', 1],
+      ['bob', 1],
+    ]),
+    paymentSource: 'FUND',
+  } as Expense
+
+  it('are counted as group spending, but apart from split spending', () => {
+    expect(getTotalGroupSpending([lunch, toner])).toBe(14000)
+    expect(getSpendingBySource([lunch, toner])).toEqual({
+      fund: { total: 5000, count: 1 },
+      split: { total: 9000, count: 1 },
+    })
+  })
+
+  it('are nobody’s own payment or share', () => {
+    expect(getTotalActiveUserPaidFor('alice', [lunch, toner])).toBe(9000)
+    expect(getTotalActiveUserShare('alice', [lunch, toner])).toBe(3000)
+    expect(calculateShare('bob', toner)).toBe(0)
+    expect(
+      getSpendingByParticipant(
+        [
+          { id: 'alice', name: 'Alice' },
+          { id: 'bob', name: 'Bob' },
+        ],
+        [lunch, toner],
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        participantId: 'alice',
+        paid: 9000,
+        share: 3000,
+      }),
+      expect.objectContaining({ participantId: 'bob', paid: 0, share: 3000 }),
+    ])
   })
 })

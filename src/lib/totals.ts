@@ -32,17 +32,43 @@ export function getTotalGroupSpending(
   )
 }
 
+/**
+ * Paid by the member out of their own pocket. Expenses paid from the group's
+ * shared fund (회비 계좌) are not: whoever recorded them did not pay.
+ */
 export function getTotalActiveUserPaidFor(
   activeUserId: string | null,
   expenses: NonNullable<Awaited<ReturnType<typeof getGroupExpenses>>>,
 ): number {
   return expenses.reduce(
     (total, expense) =>
-      expense.paidBy.id === activeUserId && !expense.isReimbursement
+      expense.paidBy.id === activeUserId &&
+      !expense.isReimbursement &&
+      expense.paymentSource !== 'FUND'
         ? total + expense.amount
         : total,
     0,
   )
+}
+
+/**
+ * Spending split in two: paid from the shared fund, and paid by one member
+ * then split between members (the part that makes people owe each other).
+ */
+export function getSpendingBySource(
+  expenses: NonNullable<Awaited<ReturnType<typeof getGroupExpenses>>>,
+) {
+  const result = {
+    fund: { total: 0, count: 0 },
+    split: { total: 0, count: 0 },
+  }
+  for (const expense of expenses) {
+    if (expense.isReimbursement) continue
+    const bucket = expense.paymentSource === 'FUND' ? result.fund : result.split
+    bucket.total += expense.amount
+    bucket.count += 1
+  }
+  return result
 }
 
 type Expense = NonNullable<Awaited<ReturnType<typeof getGroupExpenses>>>[number]
@@ -50,7 +76,7 @@ type Expense = NonNullable<Awaited<ReturnType<typeof getGroupExpenses>>>[number]
 type SplittableExpense = Pick<
   Expense,
   'amount' | 'paidFor' | 'splitMode' | 'isReimbursement'
-> & { id?: string | null }
+> & { id?: string | null; paymentSource?: 'PERSONAL' | 'FUND' }
 
 /**
  * Maps an expense into the shape {@link getExpenseShares} takes. The id decides
@@ -81,7 +107,8 @@ export function calculateShare(
   participantId: string | null,
   expense: SplittableExpense,
 ): number {
-  if (expense.isReimbursement) return 0
+  // Nobody carries a share of what the shared fund paid.
+  if (expense.isReimbursement || expense.paymentSource === 'FUND') return 0
 
   return getParticipantShare(participantId, toShareInput(expense))
 }
@@ -205,7 +232,8 @@ export function getSpendingByParticipant(
   }
 
   for (const expense of expenses) {
-    if (expense.isReimbursement) continue
+    // Transfers and fund expenses are nobody's own spending.
+    if (expense.isReimbursement || expense.paymentSource === 'FUND') continue
 
     const payer = totals.get(expense.paidBy.id)
     if (payer) {

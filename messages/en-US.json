@@ -428,7 +428,11 @@
       "participant": "Participant",
       "paid": "Paid",
       "count": "Count",
-      "share": "Share"
+      "share": "Share",
+      "difference": "Difference (before transfers)",
+      "total": "Total",
+      "getsBack": "gets back",
+      "owes": "owes"
     },
     "ByCategory": {
       "title": "Spending by category",
@@ -466,6 +470,29 @@
         "categoryGroup": "Categories",
         "category": "Detailed"
       }
+    },
+    "MoneyFlow": {
+      "title": "Where the money went",
+      "descriptionFund": "Spending in this period, split into what the shared fund paid and what one member paid first and then split.",
+      "descriptionNoFund": "This group has no shared fund: every expense was paid by one member first and then split.",
+      "totalLine": "Total spending {total} = fund {fund} + paid first and split {split}",
+      "legendFund": "Paid from the fund",
+      "legendSplit": "Paid by one member, then split",
+      "fundTitle": "Shared fund",
+      "fundDescription": "Bought with everyone's fees, so nobody needs to pay anybody back.",
+      "collected": "Fees collected · {count}",
+      "fundSpent": "Spent from the fund · {count}",
+      "balance": "Account balance today",
+      "fundLink": "See the fund history",
+      "splitTitle": "Paid by one member, then split",
+      "splitDescription": "Like a dinner or a taxi: one member pays, the others send them their share.",
+      "splitTotal": "Group spending · {count}",
+      "myPaid": "I paid first",
+      "myShare": "My own share of it",
+      "toReceive": "= To get back from others",
+      "toSend": "= To send to others",
+      "beforeTransfers": "Before transfers already made. What is left is on your settlement detail.",
+      "detailLink": "See who to send to or receive from"
     }
   },
   "Activity": {

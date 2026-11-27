@@ -279,9 +279,9 @@
     "Totals": {
       "title": "전체 합계",
       "description": "그룹 전체 지출 요약 입니다.",
-      "groupSpendings": "그룹 총 지출액",
-      "yourSpendings": "나의 총 지출",
-      "yourShare": "나의 총 부담금",
+      "groupSpendings": "그룹 총 지출액 (회비 계좌 지출 포함)",
+      "yourSpendings": "내가 먼저 낸 돈",
+      "yourShare": "내 몫 (내가 써야 할 돈)",
       "groupEarnings": "그룹 총수입",
       "yourEarnings": "내 총수입"
     },
@@ -310,13 +310,17 @@
       "empty": "아직 지출이 없습니다."
     },
     "ByParticipant": {
-      "title": "참가자별 지출",
-      "description": "각 참가자가 지불한 금액과 지출 부담.",
+      "title": "사람별 지출",
+      "description": "사람마다 먼저 낸 돈과 자기 몫이에요. 회비 계좌 지출과 송금은 빼고 계산해요.",
       "empty": "아직 지출이 없습니다.",
       "participant": "참가자",
-      "paid": "지불액",
+      "paid": "먼저 낸 돈",
       "count": "건수",
-      "share": "부담액"
+      "share": "자기 몫",
+      "difference": "차이 (송금 전)",
+      "total": "합계",
+      "getsBack": "받을 돈",
+      "owes": "보낼 돈"
     },
     "ByCategory": {
       "title": "카테고리별 지출",
@@ -334,6 +338,29 @@
         "MONTHLY": "{count, plural, other {매월 지출 #건}}",
         "YEARLY": "{count, plural, other {매년 지출 #건}}"
       }
+    },
+    "MoneyFlow": {
+      "title": "돈의 흐름",
+      "descriptionFund": "이 기간에 쓴 돈을 회비 계좌에서 낸 돈과 한 사람이 먼저 내고 나눈 돈으로 나눠 보여요.",
+      "descriptionNoFund": "회비를 쓰지 않는 그룹이라, 한 사람이 먼저 내고 나눈 돈만 있어요.",
+      "totalLine": "전체 지출 {total} = 회비 계좌 {fund} + 먼저 내고 나눈 돈 {split}",
+      "legendFund": "회비 계좌에서 낸 돈",
+      "legendSplit": "한 사람이 먼저 내고 나눈 돈",
+      "fundTitle": "회비 계좌",
+      "fundDescription": "모두가 낸 회비로 공용 물건을 사는 돈이라 따로 갚을 필요가 없어요.",
+      "collected": "걷은 회비 · {count}건",
+      "fundSpent": "회비에서 쓴 돈 · {count}건",
+      "balance": "지금 계좌 잔액",
+      "fundLink": "회비 내역 보기",
+      "splitTitle": "한 사람이 먼저 내고 나눈 돈",
+      "splitDescription": "회식이나 택시처럼 한 사람이 먼저 결제하고, 나머지 사람이 자기 몫을 그 사람에게 보내는 지출이에요.",
+      "splitTotal": "그룹이 쓴 돈 · {count}건",
+      "myPaid": "내가 먼저 낸 돈",
+      "myShare": "그중 내가 써야 할 돈 (내 몫)",
+      "toReceive": "= 다른 사람에게 받을 돈",
+      "toSend": "= 다른 사람에게 보낼 돈",
+      "beforeTransfers": "이미 주고받은 송금을 빼기 전 금액이에요. 남은 금액은 내 정산 상세에서 볼 수 있어요.",
+      "detailLink": "누구와 얼마를 주고받을지 보기"
     }
   },
   "Activity": {

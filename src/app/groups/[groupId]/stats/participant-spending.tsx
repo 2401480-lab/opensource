@@ -61,6 +61,8 @@ function ParticipantTable({
 }) {
   const locale = useLocale()
   const t = useTranslations('Stats.ByParticipant')
+  const sum = (pick: (p: ParticipantSpending) => number) =>
+    participants.reduce((total, p) => total + pick(p), 0)
 
   return (
     <Table>
@@ -70,6 +72,9 @@ function ParticipantTable({
           <TableHead className="h-8 px-2 text-right">{t('paid')}</TableHead>
           <TableHead className="h-8 px-2 text-right">{t('count')}</TableHead>
           <TableHead className="h-8 px-2 text-right">{t('share')}</TableHead>
+          <TableHead className="h-8 px-2 text-right">
+            {t('difference')}
+          </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -87,9 +92,66 @@ function ParticipantTable({
             <TableCell className="p-2 text-right tabular-nums text-muted-foreground">
               {formatCurrency(currency, participant.share, locale)}
             </TableCell>
+            <DifferenceCell
+              amount={participant.paid - participant.share}
+              currency={currency}
+            />
           </TableRow>
         ))}
+        <TableRow className="font-semibold">
+          <TableCell className="p-2">{t('total')}</TableCell>
+          <TableCell className="p-2 text-right tabular-nums">
+            {formatCurrency(
+              currency,
+              sum((p) => p.paid),
+              locale,
+            )}
+          </TableCell>
+          <TableCell className="p-2 text-right tabular-nums">
+            {sum((p) => p.paidCount)}
+          </TableCell>
+          <TableCell className="p-2 text-right tabular-nums">
+            {formatCurrency(
+              currency,
+              sum((p) => p.share),
+              locale,
+            )}
+          </TableCell>
+          <TableCell className="p-2" />
+        </TableRow>
       </TableBody>
     </Table>
+  )
+}
+
+/** Paid first − own share: + gets money back, − owes money (before transfers). */
+function DifferenceCell({
+  amount,
+  currency,
+}: {
+  amount: number
+  currency: Currency
+}) {
+  const locale = useLocale()
+  const t = useTranslations('Stats.ByParticipant')
+  if (amount === 0)
+    return (
+      <TableCell className="p-2 text-right text-muted-foreground">—</TableCell>
+    )
+  return (
+    <TableCell
+      className={
+        'p-2 text-right tabular-nums whitespace-nowrap font-medium ' +
+        (amount > 0
+          ? 'text-emerald-700 dark:text-emerald-400'
+          : 'text-red-700 dark:text-red-400')
+      }
+    >
+      {amount > 0 ? '+' : '−'}
+      {formatCurrency(currency, Math.abs(amount), locale)}{' '}
+      <span className="text-xs font-normal">
+        {amount > 0 ? t('getsBack') : t('owes')}
+      </span>
+    </TableCell>
   )
 }

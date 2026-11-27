@@ -2,6 +2,7 @@
 
 import { useCurrentGroup } from '@/app/groups/[groupId]/current-group-context'
 import { CategoryBreakdown } from '@/app/groups/[groupId]/stats/category-breakdown'
+import { MoneyFlow } from '@/app/groups/[groupId]/stats/money-flow'
 import { MonthlySpending } from '@/app/groups/[groupId]/stats/monthly-spending'
 import { ParticipantSpendingStats } from '@/app/groups/[groupId]/stats/participant-spending'
 import { RecurringSpendingStats } from '@/app/groups/[groupId]/stats/recurring-spending'
@@ -65,6 +66,14 @@ export function TotalsPageClient() {
           />
         </CardContent>
       </Card>
+      <MoneyFlow
+        groupId={groupId}
+        currency={currency}
+        bySource={data?.bySource}
+        fund={data?.fund}
+        myPaid={data?.totalParticipantSpendings}
+        myShare={data?.totalParticipantShare}
+      />
       <SpendingOverTime
         groupId={groupId}
         months={data?.months}
