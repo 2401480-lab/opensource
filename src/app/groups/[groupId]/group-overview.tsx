@@ -43,87 +43,98 @@ export function GroupOverview() {
   return (
     <>
       <TrackPage path={`/groups/${groupId}`} />
-      <MySettlementCard showSettlementsLink />
-      {group?.fundEnabled && <FundSummaryCard groupId={groupId} />}
+      {/* One column on phones; on wide screens "my money" on the left and the
+          group's spending on the right, like a dashboard. */}
+      <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+        <div className="flex flex-col gap-6 min-w-0">
+          <MySettlementCard showSettlementsLink />
+          {group?.fundEnabled && <FundSummaryCard groupId={groupId} />}
+        </div>
+        <div className="flex flex-col gap-6 min-w-0">
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('summaryTitle')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {stats && currency ? (
+                <dl className="grid grid-cols-2 gap-3">
+                  <div>
+                    <dt className="text-sm text-muted-foreground">
+                      {t('groupTotal')}
+                    </dt>
+                    <dd className="text-lg font-semibold tabular-nums">
+                      {formatCurrency(
+                        currency,
+                        stats.totalGroupSpendings,
+                        locale,
+                      )}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm text-muted-foreground">
+                      {t('myShare')}
+                    </dt>
+                    <dd className="text-lg font-semibold tabular-nums">
+                      {formatCurrency(
+                        currency,
+                        stats.totalParticipantShare ?? 0,
+                        locale,
+                      )}
+                    </dd>
+                  </div>
+                </dl>
+              ) : (
+                <Skeleton className="h-12 w-full" />
+              )}
+            </CardContent>
+          </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('summaryTitle')}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {stats && currency ? (
-            <dl className="grid grid-cols-2 gap-3">
-              <div>
-                <dt className="text-sm text-muted-foreground">
-                  {t('groupTotal')}
-                </dt>
-                <dd className="text-lg font-semibold tabular-nums">
-                  {formatCurrency(currency, stats.totalGroupSpendings, locale)}
-                </dd>
+          <Card>
+            <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0">
+              <div className="space-y-1.5">
+                <CardTitle>{t('recentTitle')}</CardTitle>
+                <CardDescription>{t('recentDescription')}</CardDescription>
               </div>
-              <div>
-                <dt className="text-sm text-muted-foreground">
-                  {t('myShare')}
-                </dt>
-                <dd className="text-lg font-semibold tabular-nums">
-                  {formatCurrency(
-                    currency,
-                    stats.totalParticipantShare ?? 0,
-                    locale,
-                  )}
-                </dd>
-              </div>
-            </dl>
-          ) : (
-            <Skeleton className="h-12 w-full" />
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0">
-          <div className="space-y-1.5">
-            <CardTitle>{t('recentTitle')}</CardTitle>
-            <CardDescription>{t('recentDescription')}</CardDescription>
-          </div>
-          <Button asChild size="sm">
-            <Link href={`/groups/${groupId}/expenses/create`}>
-              <Plus className="w-4 h-4 mr-1" />
-              {t('addExpense')}
-            </Link>
-          </Button>
-        </CardHeader>
-        <CardContent className="p-0 pb-4">
-          {!recent || !group || !currency ? (
-            <div className="px-6">
-              <Skeleton className="h-10 w-full" />
-            </div>
-          ) : recent.expenses.length === 0 ? (
-            <p className="px-6 text-sm text-muted-foreground">
-              {t('noExpenses')}
-            </p>
-          ) : (
-            <>
-              {recent.expenses.map((expense) => (
-                <ExpenseCard
-                  key={expense.id}
-                  expense={expense}
-                  currency={currency}
-                  groupId={groupId}
-                  participantCount={group.participants.length}
-                />
-              ))}
-              <div className="px-6 pt-2">
-                <Button variant="link" className="-mx-4" asChild>
-                  <Link href={`/groups/${groupId}/expenses`}>
-                    {t('allExpenses')}
-                  </Link>
-                </Button>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+              <Button asChild size="sm">
+                <Link href={`/groups/${groupId}/expenses/create`}>
+                  <Plus className="w-4 h-4 mr-1" />
+                  {t('addExpense')}
+                </Link>
+              </Button>
+            </CardHeader>
+            <CardContent className="p-0 pb-4">
+              {!recent || !group || !currency ? (
+                <div className="px-6">
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              ) : recent.expenses.length === 0 ? (
+                <p className="px-6 text-sm text-muted-foreground">
+                  {t('noExpenses')}
+                </p>
+              ) : (
+                <>
+                  {recent.expenses.map((expense) => (
+                    <ExpenseCard
+                      key={expense.id}
+                      expense={expense}
+                      currency={currency}
+                      groupId={groupId}
+                      participantCount={group.participants.length}
+                    />
+                  ))}
+                  <div className="px-6 pt-2">
+                    <Button variant="link" className="-mx-4" asChild>
+                      <Link href={`/groups/${groupId}/expenses`}>
+                        {t('allExpenses')}
+                      </Link>
+                    </Button>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </>
   )
 }

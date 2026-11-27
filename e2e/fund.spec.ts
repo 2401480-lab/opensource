@@ -62,7 +62,11 @@ test('admins run the fund; members report payments; fund expenses are no one’s
   )
 
   // Off by default: no fund tab, and members cannot turn it on.
-  await expect(page.getByRole('tab', { name: 'Fund' })).toHaveCount(0)
+  await expect(
+    page
+      .getByTestId('group-side-nav')
+      .getByRole('link', { name: 'Fund', exact: true }),
+  ).toHaveCount(0)
   expect(
     (
       await trpcPost(bob, 'groups.fund.updateSettings', {
@@ -86,7 +90,11 @@ test('admins run the fund; members report payments; fund expenses are no one’s
   await page.getByRole('button', { name: 'Save settings' }).click()
   await page.waitForURL(new RegExp(`/groups/${groupId}/fund$`))
   await expect(page.getByTestId('fund-balance')).toHaveText(money(100))
-  await expect(page.getByRole('tab', { name: 'Fund' })).toBeVisible()
+  await expect(
+    page
+      .getByTestId('group-side-nav')
+      .getByRole('link', { name: 'Fund', exact: true }),
+  ).toBeVisible()
 
   // Only members with an account are billed: Carol has not joined.
   await expect(page.getByTestId('fund-member')).toHaveCount(2)

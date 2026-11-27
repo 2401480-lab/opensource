@@ -9,29 +9,15 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
-import { trpc } from '@/trpc/client'
-import {
-  Activity,
-  BarChart3,
-  ChevronDown,
-  Home,
-  Info,
-  PiggyBank,
-  Receipt,
-  Scale,
-  Settings,
-  Users,
-} from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
-import { ComponentType } from 'react'
+import { useRouter } from 'next/navigation'
+import { useGroupNav } from './group-nav'
 
 type Props = {
   groupId: string
 }
-
-type Item = { value: string; label: string; Icon: ComponentType<any> }
 
 /**
  * The group's navigation, by importance: the main tasks as tabs (home,
@@ -40,34 +26,9 @@ type Item = { value: string; label: string; Icon: ComponentType<any> }
  */
 export function GroupTabs({ groupId }: Props) {
   const t = useTranslations('GroupNav')
-  const pathname = usePathname()
   const router = useRouter()
-  const { data } = trpc.groups.get.useQuery({ groupId })
-  const fundEnabled = data?.group?.fundEnabled === true
-  const isAdmin = data?.me?.role === 'OWNER'
-  const section =
-    pathname.replace(/^\/groups\/[^/]+\/?([^/]*).*/, '$1') || 'overview'
-
-  const primary: Item[] = [
-    { value: 'overview', label: t('overview'), Icon: Home },
-    { value: 'expenses', label: t('expenses'), Icon: Receipt },
-    { value: 'settlements', label: t('settlements'), Icon: Scale },
-    ...(fundEnabled
-      ? [{ value: 'fund', label: t('fund'), Icon: PiggyBank }]
-      : []),
-    { value: 'stats', label: t('stats'), Icon: BarChart3 },
-  ]
-  const secondary: Item[] = [
-    { value: 'information', label: t('information'), Icon: Info },
-    { value: 'members', label: t('members'), Icon: Users },
-    { value: 'activity', label: t('activity'), Icon: Activity },
-    { value: 'edit', label: t('settings'), Icon: Settings },
-    ...(isAdmin
-      ? [{ value: 'fund/settings', label: t('fundSettings'), Icon: PiggyBank }]
-      : []),
-  ]
-  const href = (value: string) =>
-    value === 'overview' ? `/groups/${groupId}` : `/groups/${groupId}/${value}`
+  const { primary, secondary, active, href } = useGroupNav(groupId)
+  const section = active
   const inSecondary = secondary.some((item) => item.value === section)
 
   return (

@@ -710,7 +710,12 @@
     "activity": "활동 내역",
     "settings": "그룹 설정",
     "fund": "회비",
-    "fundSettings": "회비 설정"
+    "fundSettings": "회비 설정",
+    "myBalance": "내 정산 상세",
+    "sideNav": "그룹 메뉴",
+    "addExpense": "지출 추가",
+    "breadcrumb": "현재 위치",
+    "myGroups": "내 그룹"
   },
   "GroupOverview": {
     "summaryTitle": "그룹 요약",

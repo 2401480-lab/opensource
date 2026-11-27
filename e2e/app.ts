@@ -250,7 +250,11 @@ export async function openTab(page: Page, tab: GroupTab): Promise<void> {
   )
   await clickUntil(
     async () => {
-      if (inMoreMenu) {
+      // Wide screens show every page in a sidebar instead of tabs.
+      const sideNav = page.getByTestId('group-side-nav')
+      if (await sideNav.isVisible()) {
+        await sideNav.getByRole('link', { name: label, exact: true }).click()
+      } else if (inMoreMenu) {
         // Labelled "More", or with the current page's name when already on
         // one of its pages.
         await page

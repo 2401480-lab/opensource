@@ -157,7 +157,10 @@ export function FundPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="rounded-lg bg-primary text-primary-foreground p-4 flex flex-col gap-1">
           <span className="text-sm">{t('balance')}</span>
-          <strong className="text-xl tabular-nums [overflow-wrap:anywhere]" data-testid="fund-balance">
+          <strong
+            className="text-xl tabular-nums [overflow-wrap:anywhere]"
+            data-testid="fund-balance"
+          >
             {money(data.totals.balance)}
           </strong>
           <span className="text-xs opacity-80">{t('balanceHint')}</span>
