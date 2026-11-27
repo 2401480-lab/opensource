@@ -164,11 +164,20 @@ export function MySettlementCard({
           </div>
         )}
 
-        {showSettlementsLink && !settled && (
-          <Button asChild className="self-start">
-            <Link href={`/groups/${groupId}/settlements`}>{t('goSettle')}</Link>
+        <div className="flex flex-wrap gap-2">
+          {showSettlementsLink && !settled && (
+            <Button asChild>
+              <Link href={`/groups/${groupId}/settlements`}>
+                {t('goSettle')}
+              </Link>
+            </Button>
+          )}
+          <Button asChild variant="outline">
+            <Link href={`/groups/${groupId}/my-balance`}>
+              {t('detailLink')}
+            </Link>
           </Button>
-        )}
+        </div>
       </CardContent>
     </Card>
   )

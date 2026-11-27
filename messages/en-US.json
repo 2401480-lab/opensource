@@ -765,7 +765,8 @@
       "sentWaiting": "(sent, waiting for confirmation)",
       "toConfirmInline": "(check the request)",
       "toConfirm": "{count, plural, one {# transfer is} other {# transfers are}} waiting for your confirmation.",
-      "confirmFrom": "Did you receive {amount} from {name}?"
+      "confirmFrom": "Did you receive {amount} from {name}?",
+      "detailLink": "See the details"
     },
     "Suggested": {
       "title": "Transfers to make",
@@ -891,5 +892,41 @@
     "rolesHelp": "Whoever creates the group starts as an admin; people who join by invitation are members. Only admins can change roles. There can be several admins, but at least one must remain.",
     "lastOwner": "The group needs at least one admin. Make someone else an admin first.",
     "roleError": "Could not change the role."
+  },
+  "MyBalance": {
+    "title": "My settlement detail",
+    "description": "Who you send money to or receive it from, and which expenses it comes from. Amounts both ways are netted automatically.",
+    "someone": "Someone",
+    "me": "me",
+    "paid": "Paid by me first",
+    "share": "My share of expenses",
+    "sent": "Transfers I sent",
+    "received": "Transfers I received",
+    "netReceive": "To receive",
+    "netSend": "To send",
+    "toSend": "To send",
+    "toReceive": "To receive",
+    "noneToSend": "Nothing to send.",
+    "noneToReceive": "Nothing to receive.",
+    "personTo": "To {name}",
+    "personFrom": "From {name}",
+    "myShareOf": "My share of {title}",
+    "theirShareOf": "{name}'s share of {title}",
+    "expenseMeta": "{date} · {payer} paid {amount} · {count} people",
+    "transfer": "Transfer",
+    "transferMeta": "{date} · {payer} sent {amount}",
+    "alreadyExchanged": "Already exchanged",
+    "recordTransfer": "I sent it ({amount} to {name} · ask to confirm)",
+    "viewRequest": "View my transfer request",
+    "confirmReceipt": "Check if you received it",
+    "waitingForSender": "You will get a request to confirm once {name} sends it.",
+    "simplifiedTitle": "What to actually transfer",
+    "simplifiedDescription": "To need fewer transfers, amounts between several people are combined. Your total stays the same.",
+    "sendTo": "Send {amount} to {name}",
+    "receiveFrom": "Receive {amount} from {name}",
+    "settledPeople": "Settled with {count} people",
+    "detailLink": "See the details",
+    "simplifiedNoneToSend": "You do not actually need to send anything.",
+    "simplifiedNoneToReceive": "You will not actually receive anything."
   }
 }

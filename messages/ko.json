@@ -701,7 +701,8 @@
       "sentWaiting": "(송금함 · 확인 대기)",
       "toConfirmInline": "(확인 요청 왔어요)",
       "toConfirm": "내가 확인해야 할 송금이 {count}건 있어요.",
-      "confirmFrom": "{name}님에게서 {amount} 받으셨나요?"
+      "confirmFrom": "{name}님에게서 {amount} 받으셨나요?",
+      "detailLink": "상세 항목 보기"
     },
     "Suggested": {
       "title": "이렇게 송금하면 끝나요",
@@ -827,5 +828,41 @@
     "rolesHelp": "그룹을 만든 사람이 처음 관리자가 되고, 초대받아 들어온 사람은 구성원이에요. 역할은 관리자만 바꿀 수 있고, 관리자는 여러 명이어도 되지만 최소 한 명은 남아야 해요.",
     "lastOwner": "관리자가 최소 한 명은 있어야 해요. 다른 사람을 먼저 관리자로 바꿔 주세요.",
     "roleError": "역할을 바꾸지 못했어요."
+  },
+  "MyBalance": {
+    "title": "내 정산 상세",
+    "description": "누구와 얼마를, 어떤 지출 때문에 주고받아야 하는지 보여요. 서로 주고받을 돈은 자동으로 상계돼요.",
+    "someone": "누군가",
+    "me": "나",
+    "paid": "내가 먼저 낸 돈",
+    "share": "내가 써야 할 돈 (내 몫 합계)",
+    "sent": "내가 보낸 송금",
+    "received": "내가 받은 송금",
+    "netReceive": "받을 돈",
+    "netSend": "보낼 돈",
+    "toSend": "내가 보낼 돈",
+    "toReceive": "내가 받을 돈",
+    "noneToSend": "보낼 돈이 없어요.",
+    "noneToReceive": "받을 돈이 없어요.",
+    "personTo": "{name}님에게",
+    "personFrom": "{name}님에게서",
+    "myShareOf": "{title} 내 몫",
+    "theirShareOf": "{title} {name}님 몫",
+    "expenseMeta": "{date} · {payer} {amount} 결제 · {count}명",
+    "transfer": "송금",
+    "transferMeta": "{date} · {payer} {amount} 보냄",
+    "alreadyExchanged": "이미 주고받은 돈",
+    "recordTransfer": "보냈어요 ({name}님에게 {amount} · 확인 요청)",
+    "viewRequest": "내 송금 요청 보기",
+    "confirmReceipt": "받았는지 확인하기",
+    "waitingForSender": "{name}님이 보내면 확인 요청이 와요.",
+    "simplifiedTitle": "실제로는 이렇게 주고받으면 돼요",
+    "simplifiedDescription": "송금 횟수를 줄이려고 여러 사람 사이의 금액을 한 번에 정리했어요. 내 전체 금액은 같아요.",
+    "sendTo": "{name}님에게 {amount} 보내기",
+    "receiveFrom": "{name}님에게서 {amount} 받기",
+    "settledPeople": "정산이 끝난 사람 {count}명",
+    "detailLink": "상세 항목 보기",
+    "simplifiedNoneToSend": "실제로 보낼 돈은 없어요.",
+    "simplifiedNoneToReceive": "실제로 받을 돈은 없어요."
   }
 }
