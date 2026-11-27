@@ -1,8 +1,9 @@
-import { deleteExpense } from '@/lib/api'
+import { deleteExpense, getExpense } from '@/lib/api'
 import { prisma } from '@/lib/prisma'
 import { groupProcedure } from '@/trpc/init'
 import { TRPCError } from '@trpc/server'
 import { z } from 'zod'
+import { assertFundExpenseAllowed } from './fund-guard'
 
 export const deleteGroupExpenseProcedure = groupProcedure
   .input(
@@ -17,6 +18,13 @@ export const deleteGroupExpenseProcedure = groupProcedure
         code: 'FORBIDDEN',
         message: 'This transfer was confirmed and cannot be deleted.',
       })
+    const existing = await getExpense(groupId, expenseId)
+    if (!existing) throw new TRPCError({ code: 'NOT_FOUND' })
+    await assertFundExpenseAllowed({
+      groupId,
+      membership: ctx.membership,
+      before: existing.paymentSource,
+    })
     await deleteExpense(groupId, expenseId, ctx.actor)
     return {}
   })

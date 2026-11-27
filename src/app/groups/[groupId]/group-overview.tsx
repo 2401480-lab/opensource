@@ -44,6 +44,7 @@ export function GroupOverview() {
     <>
       <TrackPage path={`/groups/${groupId}`} />
       <MySettlementCard showSettlementsLink />
+      {group?.fundEnabled && <FundSummaryCard groupId={groupId} />}
 
       <Card>
         <CardHeader>
@@ -124,5 +125,42 @@ export function GroupOverview() {
         </CardContent>
       </Card>
     </>
+  )
+}
+
+/** The shared fund at a glance, for groups that use one. */
+function FundSummaryCard({ groupId }: { groupId: string }) {
+  const t = useTranslations('GroupOverview')
+  const locale = useLocale()
+  const { group } = useCurrentGroup()
+  const { data } = trpc.groups.fund.get.useQuery({ groupId })
+  if (!group || !data) return null
+  const currency = getCurrencyFromGroup(group)
+  const billed = data.rows.filter((r) => r.state !== 'EXEMPT').length
+  return (
+    <Card data-testid="fund-summary">
+      <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0">
+        <div className="space-y-1.5">
+          <CardTitle>{t('fundTitle')}</CardTitle>
+          <CardDescription>
+            {data.isRestMonth
+              ? t('fundRestMonth')
+              : t('fundPaid', {
+                  paid: data.totals.monthPaidCount,
+                  total: billed,
+                })}
+          </CardDescription>
+        </div>
+        <Button asChild size="sm" variant="outline">
+          <Link href={`/groups/${groupId}/fund`}>{t('fundOpen')}</Link>
+        </Button>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-muted-foreground">{t('fundBalance')}</p>
+        <p className="text-2xl font-bold tabular-nums">
+          {formatCurrency(currency, data.totals.balance, locale)}
+        </p>
+      </CardContent>
+    </Card>
   )
 }

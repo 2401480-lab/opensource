@@ -19,6 +19,8 @@ export function getBalances(
   const balances: Balances = {}
 
   for (const expense of expenses) {
+    // Paid from the shared fund: nobody owes anybody for it.
+    if (expense.paymentSource === 'FUND') continue
     const paidBy = expense.paidBy.id
 
     if (!balances[paidBy]) balances[paidBy] = { paid: 0, paidFor: 0, total: 0 }

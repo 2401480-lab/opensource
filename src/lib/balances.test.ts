@@ -397,3 +397,19 @@ describe('split modes', () => {
     ).toBe(-100)
   })
 })
+
+describe('expenses paid from the shared fund', () => {
+  it('are left out of everyone’s balance', () => {
+    const fund = {
+      ...expense('alice', 9000, ['alice', 'bob', 'carol']),
+      paymentSource: 'FUND',
+    } as Expense
+    const balances = getBalances([
+      expense('alice', 3000, ['alice', 'bob']),
+      fund,
+    ])
+    expect(balances.alice).toEqual({ paid: 3000, paidFor: 1500, total: 1500 })
+    expect(balances.bob).toEqual({ paid: 0, paidFor: 1500, total: -1500 })
+    expect(balances.carol).toBeUndefined()
+  })
+})

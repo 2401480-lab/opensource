@@ -152,6 +152,8 @@ export const expenseFormSchema = z
     splitMode: z.enum(SplitMode).default('EVENLY'),
     saveDefaultSplittingOptions: z.boolean(),
     isReimbursement: z.boolean(),
+    // FUND: paid from the group's shared fund (회비 계좌), not by a member.
+    paymentSource: z.enum(['PERSONAL', 'FUND']).default('PERSONAL'),
     documents: z
       .array(
         z.object({

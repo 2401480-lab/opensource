@@ -3,6 +3,7 @@ import { expenseFormSchema } from '@/lib/schemas'
 import { groupProcedure } from '@/trpc/init'
 import { TRPCError } from '@trpc/server'
 import { z } from 'zod'
+import { assertFundExpenseAllowed } from './fund-guard'
 
 export const createGroupExpenseProcedure = groupProcedure
   .input(
@@ -27,6 +28,16 @@ export const createGroupExpenseProcedure = groupProcedure
           code: 'BAD_REQUEST',
           message: 'Record transfers from the Settle up page.',
         })
+      if (
+        expenseFormValues.paymentSource === 'FUND' &&
+        expenseFormValues.isReimbursement
+      )
+        throw new TRPCError({ code: 'BAD_REQUEST' })
+      await assertFundExpenseAllowed({
+        groupId,
+        membership: ctx.membership,
+        after: expenseFormValues.paymentSource,
+      })
       const expense = await createExpense(
         expenseFormValues,
         groupId,

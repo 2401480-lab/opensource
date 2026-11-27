@@ -27,6 +27,20 @@ model Group {
   settlements  Settlement[]
   createdAt    DateTime           @default(now())
   deleteAt     DateTime?
+
+  // 회비 (shared fund). Off by default: groups without a fund work as before.
+  fundEnabled        Boolean            @default(false)
+  // Default monthly fee per member, in minor units of the group currency.
+  fundAmount         Int                @default(0)
+  // Day of the month the fee is due (1-28).
+  fundDueDay         Int                @default(10)
+  // First month the fee is collected, "YYYY-MM". Null until the fund is set up.
+  fundStartMonth     String?
+  // Money already in the account before the fund was tracked here.
+  fundOpeningBalance Int                @default(0)
+  fundMemberAmounts  FundMemberAmount[]
+  fundRestMonths     FundRestMonth[]
+  fundPayments       FundPayment[]
 }
 
 model Participant {
@@ -47,6 +61,9 @@ model Participant {
   userId       String?
   role         GroupRole          @default(MEMBER)
   emailInvites GroupEmailInvite[]
+
+  fundMemberAmount FundMemberAmount?
+  fundPayments     FundPayment[]
 
   // One account is at most one participant of a given group.
   @@unique([groupId, userId])
@@ -134,6 +151,15 @@ model Expense {
 
   // Set on the transfer record created when a settlement is confirmed.
   settlement Settlement?
+
+  // FUND: paid from the group's shared fund (회비 계좌). Such expenses are not
+  // part of anyone's balance: nobody owes anybody for them.
+  paymentSource PaymentSource @default(PERSONAL)
+}
+
+enum PaymentSource {
+  PERSONAL
+  FUND
 }
 
 model ExpenseDocument {
@@ -332,4 +358,57 @@ model SettlementDocument {
   height       Int
   settlement   Settlement @relation(fields: [settlementId], references: [id], onDelete: Cascade)
   settlementId String
+}
+
+/// A member whose monthly fee differs from the group default.
+model FundMemberAmount {
+  id            String      @id
+  group         Group       @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId       String
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  participantId String      @unique
+  amount        Int
+  reason        String?
+  createdAt     DateTime    @default(now())
+
+  @@index([groupId])
+}
+
+/// A month in which no fee is collected from anyone ("YYYY-MM").
+model FundRestMonth {
+  id      String @id
+  group   Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId String
+  month   String
+
+  @@unique([groupId, month])
+}
+
+enum FundPaymentStatus {
+  PENDING // the member says they paid, waiting for an admin
+  CONFIRMED // an admin confirmed the money arrived (or recorded it)
+  REJECTED // an admin says it did not arrive
+  EXEMPT // the member does not pay this month
+}
+
+/// One member's fee for one month.
+model FundPayment {
+  id                String            @id
+  group             Group             @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId           String
+  participant       Participant       @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  participantId     String
+  month             String
+  amount            Int
+  status            FundPaymentStatus
+  // Reason for an exemption or a rejection.
+  note              String?
+  requestedByUserId String?
+  respondedByUserId String?
+  respondedAt       DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@unique([participantId, month])
+  @@index([groupId, month])
 }

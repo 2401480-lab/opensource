@@ -564,6 +564,7 @@ export async function listMyGroups(userId: string): Promise<MyGroupSummary[]> {
               id: true,
               amount: true,
               splitMode: true,
+              paymentSource: true,
               paidBy: { select: { id: true } },
               paidFor: {
                 select: { shares: true, participant: { select: { id: true } } },

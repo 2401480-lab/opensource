@@ -15,6 +15,7 @@ function expense(
     amount,
     expenseDate: new Date(Date.UTC(2026, 10, options.day ?? 1)),
     isReimbursement: options.isReimbursement ?? false,
+    paymentSource: 'PERSONAL',
     splitMode: 'EVENLY',
     paidBy: { id: paidBy },
     paidFor: paidFor.map((id) => ({ participant: { id }, shares: 100 })),

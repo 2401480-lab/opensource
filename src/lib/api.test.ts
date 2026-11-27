@@ -6,7 +6,7 @@ jest.mock('./prisma', () => ({
   prisma: {
     $transaction: jest.fn(),
     activity: { create: jest.fn() },
-    expense: { findMany: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
+    expense: { findMany: jest.fn(), findFirst: jest.fn(), update: jest.fn() },
     group: { findUnique: jest.fn() },
     recurringExpenseLink: { findMany: jest.fn() },
   },
@@ -258,7 +258,7 @@ describe('updateExpense', () => {
       participants: [{ id: 'participant-1' }],
     } as never)
     jest
-      .mocked(prisma.expense.findUnique)
+      .mocked(prisma.expense.findFirst)
       .mockResolvedValue(existingExpense as never)
     await updateExpense('group-1', 'expense-1', values)
     return jest.mocked(prisma.expense.update).mock.calls[0][0].data

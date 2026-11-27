@@ -9,12 +9,14 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
+import { trpc } from '@/trpc/client'
 import {
   Activity,
   BarChart3,
   ChevronDown,
   Home,
   Info,
+  PiggyBank,
   Receipt,
   Scale,
   Settings,
@@ -40,6 +42,9 @@ export function GroupTabs({ groupId }: Props) {
   const t = useTranslations('GroupNav')
   const pathname = usePathname()
   const router = useRouter()
+  const { data } = trpc.groups.get.useQuery({ groupId })
+  const fundEnabled = data?.group?.fundEnabled === true
+  const isAdmin = data?.me?.role === 'OWNER'
   const section =
     pathname.replace(/^\/groups\/[^/]+\/?([^/]*).*/, '$1') || 'overview'
 
@@ -47,6 +52,9 @@ export function GroupTabs({ groupId }: Props) {
     { value: 'overview', label: t('overview'), Icon: Home },
     { value: 'expenses', label: t('expenses'), Icon: Receipt },
     { value: 'settlements', label: t('settlements'), Icon: Scale },
+    ...(fundEnabled
+      ? [{ value: 'fund', label: t('fund'), Icon: PiggyBank }]
+      : []),
     { value: 'stats', label: t('stats'), Icon: BarChart3 },
   ]
   const secondary: Item[] = [
@@ -54,6 +62,9 @@ export function GroupTabs({ groupId }: Props) {
     { value: 'members', label: t('members'), Icon: Users },
     { value: 'activity', label: t('activity'), Icon: Activity },
     { value: 'edit', label: t('settings'), Icon: Settings },
+    ...(isAdmin
+      ? [{ value: 'fund/settings', label: t('fundSettings'), Icon: PiggyBank }]
+      : []),
   ]
   const href = (value: string) =>
     value === 'overview' ? `/groups/${groupId}` : `/groups/${groupId}/${value}`

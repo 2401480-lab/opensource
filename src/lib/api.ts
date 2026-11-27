@@ -118,6 +118,7 @@ export async function createExpense(
         },
       },
       isReimbursement: expenseFormValues.isReimbursement,
+      paymentSource: expenseFormValues.paymentSource,
       documents: {
         createMany: {
           data: expenseFormValues.documents.map((doc) => ({
@@ -139,6 +140,7 @@ export async function deleteExpense(
   actor?: Actor,
 ) {
   const existingExpense = await getExpense(groupId, expenseId)
+  if (!existingExpense) throw new Error(`Invalid expense ID: ${expenseId}`)
   await logActivity(groupId, ActivityType.DELETE_EXPENSE, {
     participantId: actor?.participantId,
     actorUserId: actor?.userId,
@@ -360,6 +362,7 @@ export async function updateExpense(
         delete: isDeleteRecurrenceExpenseLink,
       },
       isReimbursement: expenseFormValues.isReimbursement,
+      paymentSource: expenseFormValues.paymentSource,
       documents: {
         connectOrCreate: expenseFormValues.documents.map((doc) => ({
           create: doc,
@@ -471,6 +474,7 @@ export async function getGroupExpenses(
       expenseDate: true,
       id: true,
       isReimbursement: true,
+      paymentSource: true,
       originalAmount: true,
       originalCurrency: true,
       paidBy: { select: { id: true, name: true } },
@@ -539,8 +543,9 @@ export async function getActiveRecurringExpenses(groupId: string) {
 }
 
 export async function getExpense(groupId: string, expenseId: string) {
-  return prisma.expense.findUnique({
-    where: { id: expenseId },
+  // Scoped to the group: an expense id alone must not reach another group.
+  return prisma.expense.findFirst({
+    where: { id: expenseId, groupId },
     include: {
       paidBy: true,
       paidFor: true,

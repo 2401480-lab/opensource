@@ -17,6 +17,7 @@ export type LedgerExpense = {
   amount: number
   expenseDate: Date
   isReimbursement: boolean
+  paymentSource: 'PERSONAL' | 'FUND'
   splitMode: SplitMode
   paidBy: { id: string }
   paidFor: { participant: { id: string }; shares: number }[]
@@ -76,6 +77,8 @@ export function getMyLedger(expenses: LedgerExpense[], meId: string): MyLedger {
   const totals = { paid: 0, share: 0, sent: 0, received: 0 }
 
   for (const expense of expenses) {
+    // Paid from the shared fund: not part of anyone's balance.
+    if (expense.paymentSource === 'FUND') continue
     const shares = getExpenseShares({
       id: expense.id,
       amount: expense.amount,

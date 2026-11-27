@@ -60,6 +60,7 @@ export function ExpenseCard({
   participantCount,
 }: Props) {
   const router = useRouter()
+  const t = useTranslations('ExpenseCard')
   const locale = useLocale() as Locale
 
   const originalAmount =
@@ -93,13 +94,30 @@ export function ExpenseCard({
       <div className="flex-1">
         <div className={cn('mb-1', expense.isReimbursement && 'italic')}>
           {expense.title}
+          {expense.paymentSource === 'FUND' && (
+            <span
+              className="ml-2 rounded bg-primary/10 px-1.5 py-0.5 text-xs font-semibold text-primary not-italic"
+              data-testid="fund-badge"
+            >
+              {t('fund')}
+            </span>
+          )}
         </div>
-        <div className="text-xs text-muted-foreground">
-          <Participants expense={expense} participantCount={participantCount} />
-        </div>
-        <div className="text-xs text-muted-foreground">
-          <ActiveUserBalance {...{ groupId, currency, expense }} />
-        </div>
+        {expense.paymentSource === 'FUND' ? (
+          <div className="text-xs text-muted-foreground">{t('fundPaid')}</div>
+        ) : (
+          <>
+            <div className="text-xs text-muted-foreground">
+              <Participants
+                expense={expense}
+                participantCount={participantCount}
+              />
+            </div>
+            <div className="text-xs text-muted-foreground">
+              <ActiveUserBalance {...{ groupId, currency, expense }} />
+            </div>
+          </>
+        )}
       </div>
       <div className="flex flex-col justify-between items-end">
         <div

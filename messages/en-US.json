@@ -55,7 +55,9 @@
     "receivedBy": "Received by <strong>{paidBy}</strong> for <paidFor></paidFor>",
     "yourBalance": "Your balance:",
     "notInvolved": "Not part of my share",
-    "yourShare": "My share:"
+    "yourShare": "My share:",
+    "fund": "Fund",
+    "fundPaid": "Paid from the fund · no one owes anything"
   },
   "Groups": {
     "myGroups": "My groups",
@@ -324,6 +326,14 @@
       "title": "More options",
       "hint": "Category, currency, repeat, notes",
       "hintWithDocuments": "Category, currency, repeat, notes, receipts"
+    },
+    "paymentSource": {
+      "label": "Paid with",
+      "personal": "My money",
+      "personalHint": "I pay first, then we split it",
+      "fund": "Fund account",
+      "fundHint": "Taken from the account balance · not part of anyone's balance",
+      "badge": "Fund"
     }
   },
   "ExpenseDocumentsInput": {
@@ -735,7 +745,9 @@
     "information": "Group info",
     "members": "Participants",
     "activity": "Activity",
-    "settings": "Group settings"
+    "settings": "Group settings",
+    "fund": "Fund",
+    "fundSettings": "Fund settings"
   },
   "GroupOverview": {
     "summaryTitle": "Group summary",
@@ -745,7 +757,12 @@
     "recentDescription": "The latest shared expenses of the group.",
     "addExpense": "Add expense",
     "noExpenses": "No expense yet. Add the first one!",
-    "allExpenses": "See all expenses"
+    "allExpenses": "See all expenses",
+    "fundTitle": "Fund",
+    "fundPaid": "{paid} / {total} paid this month",
+    "fundRestMonth": "No fee this month",
+    "fundOpen": "Open the fund",
+    "fundBalance": "Account balance"
   },
   "Settlements": {
     "title": "Settle up",
@@ -928,5 +945,100 @@
     "detailLink": "See the details",
     "simplifiedNoneToSend": "You do not actually need to send anything.",
     "simplifiedNoneToReceive": "You will not actually receive anything."
+  },
+  "Fund": {
+    "title": "Fund",
+    "disabled": "This group does not use a shared fund. An admin can turn it on in the fund settings.",
+    "openSettings": "Open fund settings",
+    "settingsButton": "Fund settings",
+    "spendButton": "Spend from the fund",
+    "iPaid": "I paid for {month}",
+    "cancelRequest": "Cancel my request",
+    "balance": "Account balance",
+    "balanceHint": "Fees collected − spent from the fund",
+    "monthCollected": "Collected in {month}",
+    "monthSpent": "Spent from the fund in {month}",
+    "paidCount": "{count} paid",
+    "spentCount": "{count} expenses paid from the account",
+    "restMonthShort": "No fee this month",
+    "cumulative": "Total up to {month}",
+    "collected": "Collected",
+    "spent": "Spent",
+    "openingBalance": "Includes a starting balance of {amount}",
+    "statusTitle": "Fee status",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "feeLine": "{amount} each · due on day {day} · {paid} / {total} paid",
+    "restMonthLine": "Month off · no fee",
+    "restMonthTitle": "Month off",
+    "restMonthDescription": "Nobody pays the fee this month.",
+    "adminHelp": "When a member taps \"I paid\", it waits for you. Confirm it, record a payment yourself, or exempt someone for this month.",
+    "memberHelp": "After you tap \"I paid\", an admin confirms the money arrived.",
+    "historyTitle": "Fund history for {month}",
+    "historyFilter": "History filter",
+    "historyEmpty": "Nothing this month.",
+    "filter": {
+      "all": "All",
+      "payment": "Fee paid",
+      "expense": "Fund spent"
+    },
+    "paymentTitle": "{name}'s fee for {month}",
+    "recordedBy": "recorded by {name}",
+    "me": "(you)",
+    "state": {
+      "PAID": "Paid",
+      "PENDING": "To confirm",
+      "UNPAID": "Not paid",
+      "EXEMPT": "Exempt",
+      "REST": "Month off"
+    },
+    "confirm": "Confirm",
+    "reject": "Not received",
+    "recordPaid": "Record as paid",
+    "exempt": "Exempt this month",
+    "clearExempt": "Remove exemption",
+    "exemptReason": "Reason (e.g. conference abroad)",
+    "exemptReasonLabel": "Reason for exempting {name}",
+    "exemptSave": "Exempt",
+    "cancel": "Cancel",
+    "errors": {
+      "REST_MONTH": "There is no fee in a month off.",
+      "ALREADY_PAID": "This month is already paid.",
+      "ALREADY_REQUESTED": "You already said you paid.",
+      "EXEMPT": "You are exempt this month.",
+      "generic": "Something went wrong. Please try again."
+    }
+  },
+  "FundSettings": {
+    "title": "Fund settings",
+    "description": "Turn this on only for groups with a shared fund. Turning it off hides the fund menu and the \"fund account\" option; nothing recorded is deleted.",
+    "adminOnly": "Only admins can change the fund settings.",
+    "enabled": "Use a shared fund",
+    "enabledOn": "Shows the fund menu, the account balance and the \"fund account\" option when adding an expense.",
+    "enabledOff": "Off: the group only uses expenses and settling up.",
+    "feeTitle": "Fee and due day",
+    "feeDescription": "A new amount applies to the next payments. Fees already paid do not change.",
+    "amount": "Default fee per member ({currency})",
+    "dueDay": "Due day (every month, 1-28)",
+    "startMonth": "First month of the fee",
+    "openingBalance": "Starting account balance ({currency})",
+    "openingBalanceHint": "Money already in the account before it was tracked here.",
+    "cycleNote": "Only a monthly fee is supported for now.",
+    "memberAmountsTitle": "Different amount for some members",
+    "memberAmountsDescription": "Everyone else pays the default fee.",
+    "memberName": "Name",
+    "memberAmount": "Amount",
+    "memberReason": "Reason (optional)",
+    "remove": "Remove",
+    "addMember": "+ Add someone",
+    "restTitle": "Months off",
+    "restDescription": "Nobody pays in the selected months. They show as \"month off\" on the fund page.",
+    "previousYear": "Previous year",
+    "nextYear": "Next year",
+    "yearlyTotal": "Fee per member in {year}: {amount} (default fee)",
+    "exemptNote": "To exempt just one member for a month, use \"Exempt this month\" on the fund page.",
+    "saveError": "Could not save. Check the values.",
+    "cancel": "Cancel",
+    "save": "Save settings"
   }
 }

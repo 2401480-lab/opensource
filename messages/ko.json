@@ -253,6 +253,14 @@
       "title": "추가 옵션",
       "hint": "카테고리 · 통화 · 반복 · 메모",
       "hintWithDocuments": "카테고리 · 통화 · 반복 · 메모 · 영수증"
+    },
+    "paymentSource": {
+      "label": "돈 출처",
+      "personal": "내 돈",
+      "personalHint": "내가 먼저 내고 나눠요",
+      "fund": "회비 계좌",
+      "fundHint": "계좌 잔액에서 차감 · 개인 정산에 들어가지 않아요",
+      "badge": "회비"
     }
   },
   "Balances": {
@@ -494,7 +502,9 @@
     "yourBalance": "내 잔액:",
     "notInvolved": "내 부담 없음",
     "receivedBy": "문서 업로드 중 오류가 발생했습니다. 다시 시도해보세요.",
-    "yourShare": "내 부담:"
+    "yourShare": "내 부담:",
+    "fund": "회비",
+    "fundPaid": "회비 계좌에서 결제 · 개인 정산 없음"
   },
   "ExpenseDocumentsInput": {
     "TooBigToast": {
@@ -671,7 +681,9 @@
     "information": "그룹 정보",
     "members": "참여자 관리",
     "activity": "활동 내역",
-    "settings": "그룹 설정"
+    "settings": "그룹 설정",
+    "fund": "회비",
+    "fundSettings": "회비 설정"
   },
   "GroupOverview": {
     "summaryTitle": "그룹 요약",
@@ -681,7 +693,12 @@
     "recentDescription": "그룹에서 최근에 기록한 지출이에요.",
     "addExpense": "지출 추가",
     "noExpenses": "아직 지출이 없어요. 첫 지출을 추가해 보세요!",
-    "allExpenses": "지출 전체 보기"
+    "allExpenses": "지출 전체 보기",
+    "fundTitle": "회비",
+    "fundPaid": "이번 달 {paid} / {total}명 납부",
+    "fundRestMonth": "이번 달은 쉬는 달이에요",
+    "fundOpen": "회비 보기",
+    "fundBalance": "지금 계좌 잔액"
   },
   "Settlements": {
     "title": "정산",
@@ -864,5 +881,100 @@
     "detailLink": "상세 항목 보기",
     "simplifiedNoneToSend": "실제로 보낼 돈은 없어요.",
     "simplifiedNoneToReceive": "실제로 받을 돈은 없어요."
+  },
+  "Fund": {
+    "title": "회비",
+    "disabled": "이 그룹은 회비를 쓰지 않아요. 관리자가 회비 설정에서 켤 수 있어요.",
+    "openSettings": "회비 설정 열기",
+    "settingsButton": "회비 설정",
+    "spendButton": "계좌에서 지출",
+    "iPaid": "{month} 회비 냈어요",
+    "cancelRequest": "납부 요청 취소",
+    "balance": "지금 계좌 잔액",
+    "balanceHint": "걷은 회비 − 회비에서 쓴 돈",
+    "monthCollected": "{month}에 걷은 회비",
+    "monthSpent": "{month}에 회비에서 쓴 돈",
+    "paidCount": "{count}명 납부",
+    "spentCount": "{count}건 · 계좌로 결제한 지출",
+    "restMonthShort": "쉬는 달이라 걷지 않았어요",
+    "cumulative": "{month}까지 누적",
+    "collected": "걷은 회비",
+    "spent": "쓴 돈",
+    "openingBalance": "처음 잔액 {amount} 포함",
+    "statusTitle": "회비 납부 현황",
+    "previousMonth": "이전 달",
+    "nextMonth": "다음 달",
+    "feeLine": "1인 {amount} · 매달 {day}일까지 · {paid} / {total}명 납부",
+    "restMonthLine": "쉬는 달 · 청구 없음",
+    "restMonthTitle": "쉬는 달이에요",
+    "restMonthDescription": "이번 달은 아무에게도 회비를 청구하지 않아요.",
+    "adminHelp": "구성원이 \"회비 냈어요\"를 누르면 확인 대기로 바뀌어요. 입금을 확인하거나, 직접 납부로 기록하거나, 그 사람만 이번 달 면제할 수 있어요.",
+    "memberHelp": "\"회비 냈어요\"를 누르면 관리자가 입금을 확인한 뒤 납부로 바뀌어요.",
+    "historyTitle": "{month} 회비 내역",
+    "historyFilter": "내역 필터",
+    "historyEmpty": "이 달에는 해당 내역이 없어요.",
+    "filter": {
+      "all": "전체",
+      "payment": "회비 납부",
+      "expense": "회비 사용"
+    },
+    "paymentTitle": "{name}님 {month} 회비",
+    "recordedBy": "{name}님이 기록",
+    "me": "(나)",
+    "state": {
+      "PAID": "납부",
+      "PENDING": "확인 대기",
+      "UNPAID": "미납",
+      "EXEMPT": "면제",
+      "REST": "쉬는 달"
+    },
+    "confirm": "입금 확인",
+    "reject": "못 받았어요",
+    "recordPaid": "납부로 기록",
+    "exempt": "이번 달 면제",
+    "clearExempt": "면제 취소",
+    "exemptReason": "면제 이유 (예: 해외 학회 파견)",
+    "exemptReasonLabel": "{name}님 면제 이유",
+    "exemptSave": "면제하기",
+    "cancel": "취소",
+    "errors": {
+      "REST_MONTH": "쉬는 달에는 회비를 내지 않아요.",
+      "ALREADY_PAID": "이미 납부된 달이에요.",
+      "ALREADY_REQUESTED": "이미 납부 요청을 보냈어요.",
+      "EXEMPT": "이번 달은 면제예요.",
+      "generic": "처리하지 못했어요. 다시 시도해 주세요."
+    }
+  },
+  "FundSettings": {
+    "title": "회비 설정",
+    "description": "회비를 쓰는 그룹만 켜세요. 끄면 회비 메뉴와 \"계좌\" 선택지가 숨겨지고, 그동안의 기록은 지우지 않아요.",
+    "adminOnly": "회비 설정은 관리자만 바꿀 수 있어요.",
+    "enabled": "회비 (공동 계좌) 사용",
+    "enabledOn": "회비 메뉴, 계좌 잔액, 지출 추가의 \"회비 계좌\" 선택지가 보여요.",
+    "enabledOff": "꺼져 있어요. 지출과 정산만 써요.",
+    "feeTitle": "금액과 납부일",
+    "feeDescription": "바꾼 금액은 다음 납부 요청부터 적용돼요. 이미 납부한 기록은 그대로예요.",
+    "amount": "기본 금액 (1인, {currency})",
+    "dueDay": "납부일 (매달, 1~28일)",
+    "startMonth": "회비를 걷기 시작한 달",
+    "openingBalance": "처음 계좌 잔액 ({currency})",
+    "openingBalanceHint": "이 앱에 기록하기 전부터 계좌에 있던 돈이에요.",
+    "cycleNote": "지금은 매달 걷는 방식만 지원해요.",
+    "memberAmountsTitle": "사람마다 다른 금액",
+    "memberAmountsDescription": "여기 없는 사람은 기본 금액을 내요.",
+    "memberName": "이름",
+    "memberAmount": "금액",
+    "memberReason": "이유 (선택)",
+    "remove": "빼기",
+    "addMember": "+ 사람 추가",
+    "restTitle": "회비 쉬는 달",
+    "restDescription": "고른 달에는 아무에게도 청구하지 않아요. 회비 화면에 \"쉬는 달\"로 보여요.",
+    "previousYear": "이전 해",
+    "nextYear": "다음 해",
+    "yearlyTotal": "{year}년 1인 회비 합계 {amount} (기본 금액 기준)",
+    "exemptNote": "한 사람만 이번 달 빼려면 회비 화면의 납부 현황에서 \"이번 달 면제\"를 누르세요.",
+    "saveError": "저장하지 못했어요. 입력한 값을 확인해 주세요.",
+    "cancel": "취소",
+    "save": "설정 저장"
   }
 }

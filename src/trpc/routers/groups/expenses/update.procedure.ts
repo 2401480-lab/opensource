@@ -4,6 +4,7 @@ import { expenseFormSchema } from '@/lib/schemas'
 import { groupProcedure } from '@/trpc/init'
 import { TRPCError } from '@trpc/server'
 import { z } from 'zod'
+import { assertFundExpenseAllowed } from './fund-guard'
 
 export const updateGroupExpenseProcedure = groupProcedure
   .input(
@@ -27,6 +28,17 @@ export const updateGroupExpenseProcedure = groupProcedure
       // An expense cannot be turned into a transfer, nor the other way round.
       if (expenseFormValues.isReimbursement !== existing.isReimbursement)
         throw new TRPCError({ code: 'BAD_REQUEST' })
+      if (
+        expenseFormValues.paymentSource === 'FUND' &&
+        expenseFormValues.isReimbursement
+      )
+        throw new TRPCError({ code: 'BAD_REQUEST' })
+      await assertFundExpenseAllowed({
+        groupId,
+        membership: ctx.membership,
+        before: existing.paymentSource,
+        after: expenseFormValues.paymentSource,
+      })
       const expense = await updateExpense(
         groupId,
         expenseId,
