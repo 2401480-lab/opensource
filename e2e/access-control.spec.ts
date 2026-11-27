@@ -67,7 +67,9 @@ test('joining picks an existing participant once, without duplicates', async ({
   await expect(carol.getByLabel('Alice', { exact: true })).toHaveCount(0)
 
   await page.goto(`/groups/${groupId}/members`)
-  await expect(page.getByText('Joined', { exact: true })).toHaveCount(1)
+  await expect(page.getByRole('combobox', { name: 'Role of Bob' })).toHaveText(
+    'Member',
+  )
   await expect(page.getByText('Not joined yet', { exact: true })).toHaveCount(1)
   await bob.context().close()
   await carol.context().close()

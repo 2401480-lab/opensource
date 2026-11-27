@@ -89,7 +89,9 @@ test('an invited person accepts and joins as the invited participant', async ({
   await expect(bob.getByTestId('received-invites')).toHaveCount(0)
   await expect(bob.getByRole('link', { name })).toBeVisible()
   await page.goto(`/groups/${groupId}/members`)
-  await expect(page.getByText('Joined', { exact: true })).toHaveCount(1)
+  await expect(page.getByRole('combobox', { name: 'Role of Bob' })).toHaveText(
+    'Member',
+  )
   await expect(page.getByTestId('email-invite')).toHaveCount(0)
   await bob.context().close()
 })

@@ -10,6 +10,13 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useBaseUrl } from '@/lib/hooks'
 import { trpc } from '@/trpc/client'
 import { useTranslations } from 'next-intl'
@@ -54,18 +61,22 @@ export function Members() {
                     />
                   )}
                 </div>
-                <span className="text-xs text-muted-foreground self-start pt-0.5">
-                  {participant.id === me?.participantId
-                    ? t('you')
-                    : participant.role === 'OWNER'
-                      ? t('owner')
-                      : participant.isLinked
-                        ? t('joined')
-                        : t('notJoined')}
-                </span>
+                {participant.isLinked ? (
+                  <MemberRole
+                    groupId={groupId}
+                    participant={participant}
+                    isMe={participant.id === me?.participantId}
+                    canEdit={me?.role === 'OWNER'}
+                  />
+                ) : (
+                  <span className="text-xs text-muted-foreground self-start pt-0.5">
+                    {t('notJoined')}
+                  </span>
+                )}
               </li>
             ))}
           </ul>
+          <p className="mt-3 text-xs text-muted-foreground">{t('rolesHelp')}</p>
           {group && (
             <Button variant="secondary" size="sm" className="mt-4" asChild>
               <Link href={`/groups/${groupId}/edit`}>{t('edit')}</Link>
@@ -186,6 +197,85 @@ function EmailInvite({
         </Button>
       )}
       {message && <span className="text-muted-foreground">{message}</span>}
+    </div>
+  )
+}
+
+/**
+ * A member's role. Owners (관리자) get a picker; everyone else just sees it.
+ * The server checks again that the caller is an owner and that at least one
+ * owner remains.
+ */
+function MemberRole({
+  groupId,
+  participant,
+  isMe,
+  canEdit,
+}: {
+  groupId: string
+  participant: { id: string; name: string; role: 'OWNER' | 'MEMBER' }
+  isMe: boolean
+  canEdit: boolean
+}) {
+  const t = useTranslations('Members')
+  const utils = trpc.useUtils()
+  const [error, setError] = useState<string | null>(null)
+  const setRole = trpc.groups.members.setRole.useMutation({
+    onSuccess: async () => {
+      setError(null)
+      await utils.groups.invalidate()
+    },
+    onError: (e) =>
+      setError(e.message === 'LAST_OWNER' ? t('lastOwner') : t('roleError')),
+  })
+  const label = participant.role === 'OWNER' ? t('roleOwner') : t('roleMember')
+
+  return (
+    <div className="flex flex-col items-end gap-1 self-start">
+      <div className="flex items-center gap-2">
+        {isMe && (
+          <span className="text-xs text-muted-foreground">{t('you')}</span>
+        )}
+        {canEdit ? (
+          <Select
+            value={participant.role}
+            disabled={setRole.isPending}
+            onValueChange={(role) =>
+              setRole.mutate({
+                groupId,
+                participantId: participant.id,
+                role: role as 'OWNER' | 'MEMBER',
+              })
+            }
+          >
+            <SelectTrigger
+              className="h-8 w-28 text-xs"
+              aria-label={t('roleLabel', { name: participant.name })}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="OWNER">{t('roleOwner')}</SelectItem>
+              <SelectItem value="MEMBER">{t('roleMember')}</SelectItem>
+            </SelectContent>
+          </Select>
+        ) : (
+          <span
+            className={
+              participant.role === 'OWNER'
+                ? 'text-xs font-semibold text-primary'
+                : 'text-xs text-muted-foreground'
+            }
+          >
+            {label}
+          </span>
+        )}
+      </div>
+      {error && (
+        <span role="status" className="text-xs text-destructive">
+          {error}
+        </span>
+      )}
     </div>
   )
 }

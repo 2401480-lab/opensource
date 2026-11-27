@@ -484,7 +484,9 @@
     "settlementRequested": "<strong>{participant}</strong> asked {to} to confirm a transfer of {amount}.",
     "settlementConfirmed": "<strong>{participant}</strong> confirmed receiving {amount} from {from}.",
     "settlementRejected": "<strong>{participant}</strong> said they did not receive {amount} from {from}.",
-    "settlementCanceled": "<strong>{participant}</strong> canceled their transfer of {amount} to {to}."
+    "settlementCanceled": "<strong>{participant}</strong> canceled their transfer of {amount} to {to}.",
+    "roleChangedOwner": "<strong>{participant}</strong> made {target} an admin.",
+    "roleChangedMember": "<strong>{participant}</strong> made {target} a member."
   },
   "Information": {
     "title": "Information",
@@ -882,6 +884,12 @@
     "emailError": "Could not send the invitation.",
     "emailAlreadyMember": "This email belongs to someone already in the group.",
     "invalidEmail": "Enter a valid email address.",
-    "emailDescription": "No email is sent: the person sees the invitation in the app after signing up or logging in with this email."
+    "emailDescription": "No email is sent: the person sees the invitation in the app after signing up or logging in with this email.",
+    "roleOwner": "Admin",
+    "roleMember": "Member",
+    "roleLabel": "Role of {name}",
+    "rolesHelp": "Whoever creates the group starts as an admin; people who join by invitation are members. Only admins can change roles. There can be several admins, but at least one must remain.",
+    "lastOwner": "The group needs at least one admin. Make someone else an admin first.",
+    "roleError": "Could not change the role."
   }
 }

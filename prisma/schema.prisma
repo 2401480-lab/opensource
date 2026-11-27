@@ -217,6 +217,7 @@ enum ActivityType {
   CONFIRM_SETTLEMENT
   REJECT_SETTLEMENT
   CANCEL_SETTLEMENT
+  CHANGE_ROLE
 }
 
 // ── Authentication (tables used by better-auth, see src/lib/auth.ts) ──

@@ -31,6 +31,8 @@ export function toTRPCError(error: unknown): never {
         NOT_OWNER: 'FORBIDDEN',
         INVITE_NOT_FOR_YOU: 'FORBIDDEN',
         EMAIL_ALREADY_MEMBER: 'CONFLICT',
+        NOT_A_MEMBER: 'BAD_REQUEST',
+        LAST_OWNER: 'CONFLICT',
       } as const
     )[error.code]
     throw new TRPCError({ code, message: error.code })

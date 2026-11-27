@@ -5,6 +5,7 @@ import { getCurrentUser } from '@/lib/auth'
 import { getBalances, getSuggestedReimbursements } from '@/lib/balances'
 import { prisma } from '@/lib/prisma'
 import { randomId } from '@/lib/random'
+import { checkRoleChange } from '@/lib/role-rules'
 
 /**
  * Group membership: which account is which participant of a group.
@@ -32,7 +33,9 @@ export class MembershipError extends Error {
       | 'DUPLICATE_NAME'
       | 'NOT_OWNER'
       | 'INVITE_NOT_FOR_YOU'
-      | 'EMAIL_ALREADY_MEMBER',
+      | 'EMAIL_ALREADY_MEMBER'
+      | 'NOT_A_MEMBER'
+      | 'LAST_OWNER',
     message?: string,
   ) {
     super(message ?? code)
@@ -620,4 +623,60 @@ export async function requireGroupMemberForRoute(
   if (!membership)
     return { response: Response.json({ error: 'Not found' }, { status: 404 }) }
   return { membership }
+}
+
+/**
+ * Changes a member's role (관리자 OWNER / 구성원 MEMBER). Only owners may do
+ * this, and the group always keeps at least one owner. Runs with the group row
+ * locked so two owners demoting each other at once cannot leave it ownerless;
+ * the actor's role is re-checked inside the lock.
+ */
+export async function setParticipantRole({
+  groupId,
+  actorUserId,
+  participantId,
+  role,
+}: {
+  groupId: string
+  actorUserId: string
+  participantId: string
+  role: 'OWNER' | 'MEMBER'
+}) {
+  const changed = await prisma.$transaction(async (tx) => {
+    const locked = await tx.$queryRaw<{ id: string }[]>`
+      SELECT "id" FROM "Group" WHERE "id" = ${groupId} FOR UPDATE`
+    if (locked.length === 0) throw new MembershipError('GROUP_NOT_FOUND')
+
+    const actor = await tx.participant.findUnique({
+      where: { groupId_userId: { groupId, userId: actorUserId } },
+      select: { id: true, role: true },
+    })
+    if (!actor || actor.role !== 'OWNER') throw new MembershipError('NOT_OWNER')
+
+    const target = await tx.participant.findFirst({
+      where: { id: participantId, groupId },
+      select: { id: true, userId: true, role: true },
+    })
+    if (!target) throw new MembershipError('PARTICIPANT_NOT_FOUND')
+
+    const ownerCount = await tx.participant.count({
+      where: { groupId, role: 'OWNER', userId: { not: null } },
+    })
+    const error = checkRoleChange({ target, newRole: role, ownerCount })
+    if (error) throw new MembershipError(error)
+    if (target.role === role) return null
+
+    await tx.participant.update({
+      where: { id: target.id },
+      data: { role },
+    })
+    return { actorId: actor.id }
+  })
+
+  if (changed)
+    await logActivity(groupId, ActivityType.CHANGE_ROLE, {
+      participantId: changed.actorId,
+      actorUserId,
+      data: JSON.stringify({ target: participantId, role }),
+    })
 }

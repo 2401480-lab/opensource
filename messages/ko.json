@@ -352,7 +352,9 @@
     "settlementRequested": "<strong>{participant}</strong>님이 {to}님에게 {amount} 송금 완료를 요청했어요.",
     "settlementConfirmed": "<strong>{participant}</strong>님이 {from}님에게서 {amount} 수령을 확인했어요.",
     "settlementRejected": "<strong>{participant}</strong>님이 {from}님에게서 {amount}를 받지 못했다고 했어요.",
-    "settlementCanceled": "<strong>{participant}</strong>님이 {to}님에게 보낸 {amount} 송금 요청을 취소했어요."
+    "settlementCanceled": "<strong>{participant}</strong>님이 {to}님에게 보낸 {amount} 송금 요청을 취소했어요.",
+    "roleChangedOwner": "<strong>{participant}</strong>님이 {target}님을 관리자로 바꿨어요.",
+    "roleChangedMember": "<strong>{participant}</strong>님이 {target}님을 구성원으로 바꿨어요."
   },
   "SchemaErrors": {
     "duplicateParticipantName": "이미 같은 이름을 가진 참가자가 있어요.",
@@ -818,6 +820,12 @@
     "emailError": "초대를 보내지 못했어요.",
     "emailAlreadyMember": "이미 그룹에 참여한 사람의 이메일이에요.",
     "invalidEmail": "올바른 이메일 주소를 입력해 주세요.",
-    "emailDescription": "실제 메일은 가지 않아요. 그 사람이 이 이메일로 가입하거나 로그인하면 앱 안에서 초대가 보여요."
+    "emailDescription": "실제 메일은 가지 않아요. 그 사람이 이 이메일로 가입하거나 로그인하면 앱 안에서 초대가 보여요.",
+    "roleOwner": "관리자",
+    "roleMember": "구성원",
+    "roleLabel": "{name}님의 역할",
+    "rolesHelp": "그룹을 만든 사람이 처음 관리자가 되고, 초대받아 들어온 사람은 구성원이에요. 역할은 관리자만 바꿀 수 있고, 관리자는 여러 명이어도 되지만 최소 한 명은 남아야 해요.",
+    "lastOwner": "관리자가 최소 한 명은 있어야 해요. 다른 사람을 먼저 관리자로 바꿔 주세요.",
+    "roleError": "역할을 바꾸지 못했어요."
   }
 }

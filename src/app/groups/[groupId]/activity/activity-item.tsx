@@ -45,6 +45,20 @@ function parseSettlementData(data: string | null) {
   return null
 }
 
+function parseRoleChangeData(data: string | null) {
+  try {
+    const parsed: unknown = JSON.parse(data ?? '')
+    if (
+      parsed &&
+      typeof parsed === 'object' &&
+      'target' in parsed &&
+      typeof parsed.target === 'string'
+    )
+      return parsed as { target: string; role: 'OWNER' | 'MEMBER' }
+  } catch {}
+  return null
+}
+
 function useSummary(activity: Activity, participantName?: string) {
   const t = useTranslations('Activity')
   const locale = useLocale()
@@ -87,6 +101,20 @@ function useSummary(activity: Activity, participantName?: string) {
     return <>{tr('groupRestored')}</>
   } else if (activity.activityType == ActivityType.JOIN_GROUP) {
     return <>{tr('groupJoined')}</>
+  } else if (activity.activityType == ActivityType.CHANGE_ROLE) {
+    const change = parseRoleChangeData(activity.data)
+    return (
+      <>
+        {t.rich(
+          change?.role === 'OWNER' ? 'roleChangedOwner' : 'roleChangedMember',
+          {
+            participant,
+            target: nameOf(change?.target),
+            strong: (chunks) => <strong>{chunks}</strong>,
+          },
+        )}
+      </>
+    )
   } else if (activity.activityType == ActivityType.REQUEST_SETTLEMENT) {
     return <>{tr('settlementRequested')}</>
   } else if (activity.activityType == ActivityType.CONFIRM_SETTLEMENT) {
